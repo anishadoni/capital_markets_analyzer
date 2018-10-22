@@ -1,0 +1,68 @@
+<?xml version = "1.0" encoding="UTF-8"?>
+<tickerListing title = "Stock Tickers">
+	<company id = "1">
+		<name>Alphabet, Inc.</name>
+		<social>Google</social>
+		<ticker>GOOGL</ticker>
+	</company>
+	<company id = "2">
+		<name>AMD</name>
+		<social>AMD</social>
+		<ticker>AMD</ticker>
+	</company>
+	<company id = "3">
+		<name>Amazon.com, Inc.</name>
+		<social>Amazon</social>
+		<ticker>AMZN</ticker>
+	</company>
+	<company id = "4">
+		<name>Apple, Inc.</name>
+		<social>Amazon</social>
+		<ticker>AAPL</ticker>
+	</company>
+	<company id = "5">
+		<name>Facebook, Inc.</name>
+		<social>Facebook</social>
+		<ticker>FB</ticker>
+	</company>
+	<company id = "6">
+		<name>Microsoft Corp.</name>
+		<social>Microsoft</social>
+		<ticker>MSFT</ticker>
+	</company>
+	<company id = "7">
+		<name>Snap Inc.</name>
+		<social>Snapchat</social>
+		<ticker>AMD</ticker>
+	</company>
+	<company id = "8">
+		<name>Twitter, Inc.</name>
+		<social>Twitter</social>
+		<ticker>TWTR</ticker>
+	</company>
+	<company id = "9">
+		<name>Netflix, Inc.</name>
+		<social>Netflix</social>
+		<ticker>NFLX</ticker>
+	</company>
+	<company id = "10">
+		<name>Tesla, Inc.</name>
+		<social>Tesla</social>
+		<ticker>TSLA</ticker>
+	</company>
+	<copmany id = "11">
+		<name>Intel Corp.</name>
+		<social>Intel</social>
+		<ticker>INTC</ticker>
+	</copmany>
+	<company id = "12">
+		<name>QUALCOMM, Inc.</name>
+		<social>Qualcomm</social>
+		<ticker>QCOM</ticker>
+	</company>
+	<company id = "13">
+		<name>NVIDIA Corp.</name>
+		<social>Nvidia</social>
+		<ticker>NVDA</ticker>
+	</company>
+</tickerListing>
