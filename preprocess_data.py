@@ -5,6 +5,7 @@ import math
 from os.path import isfile, join, dirname
 from os import listdir
 import json
+import glob
 import xml.etree.ElementTree as et
 import matplotlib.pyplot as plt
 from multiprocessing import Pool
@@ -148,22 +149,16 @@ def load_short_movie_reviews():
 
 def load_imdb(data_directory):
     data_dir = os.path.join(BASE_PATH, data_directory)
-    pos_train_dir = join(data_dir, "train\\pos\\")
-    pos_test_dir = join(data_dir, "test\\pos\\")
-    neg_train_dir = join(data_dir, "train\\neg\\")
-    neg_test_dir = join(data_dir, "test\\neg\\")
 
-    pos_directories = [pos_train_dir, pos_test_dir]
-    neg_directories = [neg_train_dir, neg_test_dir]
+    pos_files = glob.glob(data_dir + "\\*pos.txt")
+    neg_files = glob.glob(data_dir + "\\*neg.txt")
     pos_reviews = []
-    for d in pos_directories:
-        for fn in listdir(d):
-            pos_reviews.append([line.split() for line in open(join(d, fn), "r", encoding='utf-8')])
+    for file in pos_files:
+        pos_reviews.append([line.split() for line in open(file, "r", encoding='utf-8')])
     print("Positive reviews read into memory!")
     neg_reviews = []
-    for d in neg_directories:
-        for fn in listdir(d):
-            neg_reviews.append([line.split() for line in open(join(d, fn), "r", encoding='utf-8')])
+    for file in neg_files:
+        neg_reviews.append([line.split() for line in open(file, "r", encoding='utf-8')])
     print("Negative reviews read into memory!")
     num_reviews = len(pos_reviews) + len(neg_reviews)
     print("The total number of reviews: ", num_reviews)
@@ -242,4 +237,3 @@ def get_split_data(data, labels, train_split, test_split, cv_split):
 
 if __name__ == "__main__":
 #   word_vec_data = to_wordvec_matrix(load_movie_reviews(), MAX_SEQ_LENGTH_SHORT, WORDVEC_LENGTH_SHORT, load_word_vectors('glove.6B.50d.txt'))
-    data, labels = load_imdb("imdb_reviews\\reviews\\")

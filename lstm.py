@@ -13,6 +13,7 @@ from sklearn.metrics import f1_score, precision_recall_fscore_support, accuracy_
 import sklearn.metrics as sklm
 import matplotlib.pyplot as plt
 import preprocess_data
+import datetime
 from preprocess_data import *
 base_path = dirname(os.path.realpath(__file__))
 SNAPSHOT_PREFIX = join(base_path, "models\\")
@@ -46,13 +47,13 @@ class Metrics(keras.callbacks.Callback):
 
         return
 
-def train_multi_models():
-    vn = 18
-    lstm_1_size = [10]
-    drop_1_size = [0.75]
-    epoch_size = [200]
-
-    raw_data, labels = load_movie_reviews()
+def train_multi_models(vn, lstm_1_size, drop_1_size, epoch_size):
+    # vn = 1
+    # lstm_1_size = [10]
+    # drop_1_size = [0.75]
+    # epoch_size = [200]
+    date = datetime.datetime.now()
+    raw_data, labels = load_imdb("data\\imdb_reviews")
     word_vec_data = make_wordvec_matrix(
         raw_data,
         MAX_SEQ_LENGTH_SHORT,
@@ -63,7 +64,7 @@ def train_multi_models():
         for d in drop_1_size:
             for e in epoch_size:
                 try:
-                    train_lstm(word_vec_data, labels, "9-29-18_lstm_model" + str(vn) + "_f1_" + str(e), batch_size, e, l, d)
+                    train_lstm(word_vec_data, labels, "{0}-{1}-{2}_lstm_model".format(date.month, date.day, date.year) + str(vn) + "_f1_" + str(e), batch_size, e, l, d)
                     vn +=1
                 except:
                     continue
@@ -171,6 +172,8 @@ def train_lstm(data, labels, snapshot_filename, batch_size, max_epochs, lstm_1, 
     print('Test accuracy:', score[1])
     
     # saves the model along with accompanying text detailing train, test, and cv scores
+    if not os.path.exists(SNAPSHOT_PREFIX):
+        os.makedirs(SNAPSHOT_PREFIX)
     model.save(SNAPSHOT_PREFIX + snapshot_filename + '.h5')
     
     snapshot_text = open(SNAPSHOT_PREFIX + snapshot_filename + '.txt', 'w')
@@ -194,7 +197,7 @@ def train_lstm(data, labels, snapshot_filename, batch_size, max_epochs, lstm_1, 
 
 if __name__ == "__main__":
     # train_multi_models()
-    raw_data, labels = load_imdb("data\\imdb_reviews\\reviews\\")
-    word_vec_data = make_wordvec_matrix(raw_data, 'glove.6B.50d.txt', MAX_SEQ_LENGTH)
+    # raw_data, labels = load_imdb("data\\imdb_reviews\\reviews\\")
+    # word_vec_data = make_wordvec_matrix(raw_data, 'glove.6B.50d.txt', MAX_SEQ_LENGTH)
 
-    train_lstm(word_vec_data, labels, "10-4-18_lstm_model_test_imdb_50", batch_size, 50, 64, 0.5)
+    # train_lstm(word_vec_data, labels, "10-4-18_lstm_model_test_imdb_50", batch_size, 50, 64, 0.5)
