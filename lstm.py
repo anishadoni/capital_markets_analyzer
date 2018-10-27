@@ -16,7 +16,7 @@ import preprocess_data
 import datetime
 from preprocess_data import *
 base_path = dirname(os.path.realpath(__file__))
-SNAPSHOT_PREFIX = join(base_path, "models\\")
+SNAPSHOT_PREFIX = join(base_path, "models//")
 
 # DEFAULT TESTING VALUES
 batch_size = 500
@@ -53,11 +53,10 @@ def train_multi_models(vn, lstm_1_size, drop_1_size, epoch_size):
     # drop_1_size = [0.75]
     # epoch_size = [200]
     date = datetime.datetime.now()
-    raw_data, labels = load_imdb("data\\imdb_reviews")
-    word_vec_data = make_wordvec_matrix(
-        raw_data,
-        MAX_SEQ_LENGTH_SHORT,
-        WORDVEC_LENGTH_SHORT,
+    raw_data, labels = load_imdb("data//imdb_reviews")
+    word_vec_data = make_wordvec_matrix(raw_data,
+        MAX_SEQ_LENGTH_SHORT, 
+        WORDVEC_LENGTH, 
         load_word_vectors('glove.6B.50d.txt'))
 
     for l in lstm_1_size:
@@ -122,7 +121,7 @@ def train_lstm(data, labels, snapshot_filename, batch_size, max_epochs, lstm_1, 
     input_shape = (sample_text_len, word_vector_dimension)
     
     # create a tensorboard callback file and log directory
-    tensorboard_path_dir = SNAPSHOT_PREFIX + 'logs\\' + snapshot_filename
+    tensorboard_path_dir = SNAPSHOT_PREFIX + 'logs//' + snapshot_filename
     if not os.path.exists(tensorboard_path_dir):
         os.makedirs(tensorboard_path_dir)
 

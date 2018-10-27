@@ -21,7 +21,7 @@ NUM_PROCESSES = 4 # ideally should be set to number of cores on cpu
 WORD_VEC_FILE = 'glove.6B.50d.txt'
 
 def load_company_frame(filename):
-    xml_file = join(BASE_PATH, "data\\twitter\\" + filename)
+    xml_file = join(BASE_PATH, "data//twitter//" + filename)
 
     tree = et.parse(xml_file)
 
@@ -43,7 +43,7 @@ def load_company_frame(filename):
 def load_tickers(filename):
     _tickers = []
     # _companies = []
-    xml_file = os.path.join(BASE_PATH, "data\\twitter\\" + filename)
+    xml_file = os.path.join(BASE_PATH, "data//twitter//" + filename)
 
     tree = et.parse(xml_file)
 
@@ -59,7 +59,7 @@ def load_tickers(filename):
 # loads company hash values 
 def load_company_hash(filename):
     _company_hash_list = []
-    xml_file = os.path.join(BASE_PATH, "data\\twitter\\" + filename)
+    xml_file = os.path.join(BASE_PATH, "data//twitter//" + filename)
     tree = et.parse(xml_file)
     root = tree.getroot()
     # check company_stock.xml in BASE_PATH//data to determine data storage format 
@@ -81,11 +81,11 @@ def load_tweets(filename):
         name = company[2]
 
         tweets = []
-        data_dir = os.path.join(BASE_PATH, "data\\twitter\\" + ticker)
+        data_dir = os.path.join(BASE_PATH, "data//twitter//" + ticker)
 
         print("---------- loading twitter data for " + name + " ----------")
 
-        for line in open(data_dir + "\\twitter_data.json", 'r'):
+        for line in open(data_dir + "//twitter_data.json", 'r'):
             raw_tweet = json.loads(line)
             tweets.append(raw_tweet['text'])
             # tweets.append(json.loads(line))
@@ -101,7 +101,7 @@ def shuffle_in_unison(a,b):
     np.random.shuffle(b)
 
 def load_word_vectors(filename):
-    data_dir = os.path.join(BASE_PATH, "data\\word2vec\\")
+    data_dir = os.path.join(BASE_PATH, "data//word2vec//")
     filename = os.path.join(data_dir, filename)
 
     print('-------- loading pre-trained word vector matrix ----------')
@@ -150,8 +150,8 @@ def load_short_movie_reviews():
 def load_imdb(data_directory):
     data_dir = os.path.join(BASE_PATH, data_directory)
 
-    pos_files = glob.glob(data_dir + "\\*pos.txt")
-    neg_files = glob.glob(data_dir + "\\*neg.txt")
+    pos_files = glob.glob(data_dir + "//*pos.txt")
+    neg_files = glob.glob(data_dir + "//*neg.txt")
     pos_reviews = []
     for file in pos_files:
         pos_reviews.append([line.split() for line in open(file, "r", encoding='utf-8')])
