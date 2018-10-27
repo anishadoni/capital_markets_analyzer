@@ -54,10 +54,7 @@ def train_multi_models(vn, lstm_1_size, drop_1_size, epoch_size):
     # epoch_size = [200]
     date = datetime.datetime.now()
     raw_data, labels = load_imdb("data//imdb_reviews")
-    word_vec_data = make_wordvec_matrix(raw_data,
-        MAX_SEQ_LENGTH_SHORT, 
-        WORDVEC_LENGTH, 
-        load_word_vectors('glove.6B.50d.txt'))
+    word_vec_data = make_wordvec_matrix(raw_data)
 
     for l in lstm_1_size:
         for d in drop_1_size:
@@ -68,7 +65,6 @@ def train_multi_models(vn, lstm_1_size, drop_1_size, epoch_size):
                 except:
                     continue
                 
-    return 1
 def f1(y_true, y_pred):
     def recall(y_true, y_pred):
         """Recall metric.
