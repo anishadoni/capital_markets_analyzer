@@ -235,5 +235,3 @@ def get_split_data(data, labels, train_split, test_split, cv_split):
     
     return (x_train, y_train, x_test, y_test, x_cv, y_cv)
 
-if __name__ == "__main__":
-#   word_vec_data = to_wordvec_matrix(load_movie_reviews(), MAX_SEQ_LENGTH_SHORT, WORDVEC_LENGTH_SHORT, load_word_vectors('glove.6B.50d.txt'))

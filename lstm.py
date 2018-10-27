@@ -195,9 +195,3 @@ def train_lstm(data, labels, snapshot_filename, batch_size, max_epochs, lstm_1, 
     snapshot_text.write('Test Loss = ' + str(score[0]) + '\n')
     snapshot_text.write('Test Accuracy = ' + str(score[1]) + '\n')
 
-if __name__ == "__main__":
-    # train_multi_models()
-    # raw_data, labels = load_imdb("data\\imdb_reviews\\reviews\\")
-    # word_vec_data = make_wordvec_matrix(raw_data, 'glove.6B.50d.txt', MAX_SEQ_LENGTH)
-
-    # train_lstm(word_vec_data, labels, "10-4-18_lstm_model_test_imdb_50", batch_size, 50, 64, 0.5)
