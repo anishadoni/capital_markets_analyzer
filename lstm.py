@@ -3,6 +3,7 @@ import warnings
 import numpy as np
 import os
 from os.path import join, dirname
+from pathlib import Path
 from numpy import newaxis
 import keras
 from keras.layers.core import Dense, Activation, Dropout
@@ -15,8 +16,10 @@ import matplotlib.pyplot as plt
 import preprocess_data
 import datetime
 from preprocess_data import *
-base_path = dirname(os.path.realpath(__file__))
-SNAPSHOT_PREFIX = join(base_path, "models//")
+# base_path = dirname(os.path.realpath(__file__))
+# SNAPSHOT_PREFIX = join(base_path, "models//")
+BASE_PATH = Path.cwd()
+SNAPSHOT_PREFIX = base_path/"models"
 
 # DEFAULT TESTING VALUES
 batch_size = 500
@@ -53,7 +56,7 @@ def train_multi_models(vn, lstm_1_size, drop_1_size, epoch_size):
     # drop_1_size = [0.75]
     # epoch_size = [200]
     date = datetime.datetime.now()
-    raw_data, labels = load_imdb("data//imdb_reviews")
+    raw_data, labels = load_imdb("imdb_reviews")
     word_vec_data = make_wordvec_matrix(raw_data)
 
     for l in lstm_1_size:
@@ -117,9 +120,9 @@ def train_lstm(data, labels, snapshot_filename, batch_size, max_epochs, lstm_1, 
     input_shape = (sample_text_len, word_vector_dimension)
     
     # create a tensorboard callback file and log directory
-    tensorboard_path_dir = SNAPSHOT_PREFIX + 'logs//' + snapshot_filename
-    if not os.path.exists(tensorboard_path_dir):
-        os.makedirs(tensorboard_path_dir)
+    tensorboard_path_dir = SNAPSHOT_PREFIX/"logs"/snapshot_filename
+    if not tensorboard_path_dir.exists():
+        tensorboard_path_dir.mkdir(exist_ok=True, parents=True)
 
     tbCallBack = keras.callbacks.TensorBoard(
         log_dir= tensorboard_path_dir,
@@ -167,9 +170,9 @@ def train_lstm(data, labels, snapshot_filename, batch_size, max_epochs, lstm_1, 
     print('Test accuracy:', score[1])
     
     # saves the model along with accompanying text detailing train, test, and cv scores
-    if not os.path.exists(SNAPSHOT_PREFIX):
-        os.makedirs(SNAPSHOT_PREFIX)
-    model.save(SNAPSHOT_PREFIX + snapshot_filename + '.h5')
+    if not SNAPSHOT_PREFIX.exists():
+        SNAPSHOT_PREFIX.mkdir(exist_ok=True, parents=False)
+    model.save(str(SNAPSHOT_PREFIX/snapshot_filename/'.h5'))
     
     snapshot_text = open(SNAPSHOT_PREFIX + snapshot_filename + '.txt', 'w')
     snapshot_text.write(snapshot_filename + ' information:\n')
