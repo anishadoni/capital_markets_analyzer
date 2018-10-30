@@ -19,7 +19,7 @@ from preprocess_data import *
 # base_path = dirname(os.path.realpath(__file__))
 # SNAPSHOT_PREFIX = join(base_path, "models//")
 BASE_PATH = Path.cwd()
-SNAPSHOT_PREFIX = base_path/"models"
+SNAPSHOT_PREFIX = BASE_PATH/"models"
 
 # DEFAULT TESTING VALUES
 batch_size = 500
