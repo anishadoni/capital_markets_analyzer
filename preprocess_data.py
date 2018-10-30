@@ -106,7 +106,7 @@ def shuffle_in_unison(a,b):
 
 def load_word_vectors(filename):
     # data_dir = os.path.join(BASE_PATH, "data//word2vec//")
-    data_dir = BASE_PATH/"data"/"word2vec"
+    data_dir = BASE_PATH/"data"/"glove_wordvec"
     # filename = os.path.join(data_dir, filename)
     filename = data_dir/filename
     print('-------- loading pre-trained word vector matrix ----------')
