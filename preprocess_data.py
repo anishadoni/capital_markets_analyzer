@@ -20,7 +20,7 @@ MAX_SEQ_LENGTH = 250
 WORDVEC_LENGTH = 50
 NUM_CLASSES = 2
 NUM_PROCESSES = 4 # ideally should be set to number of cores on cpu
-WORD_VEC_FILE = 'glove.6B.50d.txt'
+WORD_VEC_FILE = "glove.6B.50d.txt"
 
 def load_company_frame(filename):
     # xml_file = join(BASE_PATH, "data//twitter//" + filename)
@@ -108,7 +108,7 @@ def load_word_vectors(filename):
     # data_dir = os.path.join(BASE_PATH, "data//word2vec//")
     data_dir = BASE_PATH/"data"/"word2vec"
     # filename = os.path.join(data_dir, filename)
-    filename = BASE_PATH/filename
+    filename = data_dir/filename
     print('-------- loading pre-trained word vector matrix ----------')
     raw_wordvec_file = open(filename, encoding = "utf8")
     word_index = []
