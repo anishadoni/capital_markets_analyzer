@@ -154,7 +154,7 @@ def load_short_movie_reviews():
 
 def load_imdb(data_directory):
     # data_dir = os.path.join(BASE_PATH, data_directory)
-    data_dir = BASE_PATH/data_directory
+    data_dir = BASE_PATH/"data"/data_directory
     # pos_files = glob.glob(data_dir + "//*pos.txt")
     # neg_files = glob.glob(data_dir + "//*neg.txt")
     pos_files = [f for f in data_dir.glob("*pos.txt")]
