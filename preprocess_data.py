@@ -155,11 +155,10 @@ def load_short_movie_reviews():
 def load_imdb(data_directory):
     # data_dir = os.path.join(BASE_PATH, data_directory)
     data_dir = BASE_PATH/data_directory
-
     # pos_files = glob.glob(data_dir + "//*pos.txt")
     # neg_files = glob.glob(data_dir + "//*neg.txt")
-    pos_files = data_dir.glob("*pos.txt")
-    neg_files = data_dir.glob("*neg.txt")
+    pos_files = [f for f in data_dir.glob("*pos.txt")]
+    neg_files = [f for f in data_dir.glob("*neg.txt")]
     pos_reviews = []
     for file in pos_files:
         pos_reviews.append([line.split() for line in open(file, "r", encoding='utf-8')])
@@ -242,4 +241,7 @@ def get_split_data(data, labels, train_split, test_split, cv_split):
     x_cv, y_cv = data[splitpoint_b:], labels[splitpoint_b:]
     
     return (x_train, y_train, x_test, y_test, x_cv, y_cv)
+
+if __name__ == "__main__":
+    load_imdb("imdb_reviews")
 
