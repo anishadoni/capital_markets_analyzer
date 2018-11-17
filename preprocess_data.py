@@ -11,6 +11,7 @@ import xml.etree.ElementTree as et
 import matplotlib.pyplot as plt
 from multiprocessing import Pool
 import itertools
+import re
 
 # BASE_PATH = dirname(os.path.realpath(__file__))
 BASE_PATH = Path.cwd()
@@ -152,6 +153,13 @@ def load_short_movie_reviews():
     # plt.show()
     return pos_reviews_raw + neg_reviews_raw, labels
 
+# helper function for removing special characters from strings
+strip_special_chars = re.compile("[^A-Za-z0-9 ]+")
+
+def cleanSentences(string):
+    string = string.lower().replace("<br />", " ")
+    return re.sub(strip_special_chars, "", string.lower())
+
 def load_imdb(data_directory):
     # data_dir = os.path.join(BASE_PATH, data_directory)
     data_dir = BASE_PATH/"data"/data_directory
@@ -162,7 +170,7 @@ def load_imdb(data_directory):
     neg_files = [f for f in data_dir.glob("*neg.txt")]
     pos_reviews = []
     for file in pos_files:
-        pos_reviews.append([line.split() for line in open(file, "r", encoding='utf-8')])
+        pos_reviews.append([map(cleanSentences, line.split()) for line in open(file, "r", encoding='utf-8')])
     print("Positive reviews read into memory!")
     neg_reviews = []
     for file in neg_files:
@@ -181,13 +189,26 @@ def make_wordvec_matrix(text, wordvec_file=WORD_VEC_FILE, max_seq_length=MAX_SEQ
     wordvec_df = load_word_vectors(WORD_VEC_FILE)
     # assert len(wordvec_df.shape[-1]) == wordvec_length, "The dimensions of the word vector matrix used must match the length of wordvec_length provided"
     wordvec_length = wordvec_df.shape[-1]
-    wordvec_matrix = np.zeros((len(text), max_seq_length, wordvec_length))
-    for i, sample in enumerate(text):
-        for j, sample_element in enumerate(sample):
-            try:
-                wordvec_matrix[i][j][:] = wordvec_df.loc[text[i][j]].tolist()
-            except:
-                continue
+    # wordvec_matrix = np.zeros((len(text), max_seq_length, wordvec_length))
+    # for i, sample in enumerate(text):
+    #     for j, sample_element in enumerate(sample):
+    #         try:
+    #             wordvec_matrix[i][j][:] = wordvec_df.loc[text[i][j]].tolist()
+    #         except:
+    #             continue
+
+    # updated implementation using pandas dataframes
+    wordvec_matrix = pd.DataFrame(text).fillna('0')
+
+    # pure function that returns the wordvec representation of a single word
+    def to_wordvec(string):
+        try:
+            return wordvec_df.loc[string].tolist()
+        except e as KeyError:
+            return wordvec_df.iloc(399999) #returns vector for unknown words
+
+    wordvec_matrix = wordvec_matrix.applymap(wordvec)
+
     print("chunked word_vec_matrix created for input data")
                     
     return wordvec_matrix
