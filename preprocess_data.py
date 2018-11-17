@@ -207,7 +207,7 @@ def make_wordvec_matrix(text, wordvec_file=WORD_VEC_FILE, max_seq_length=MAX_SEQ
         except e as KeyError:
             return wordvec_df.iloc(399999) #returns vector for unknown words
 
-    wordvec_matrix = wordvec_matrix.applymap(wordvec)
+    wordvec_matrix = wordvec_matrix.applymap(to_wordvec)
 
     print("chunked word_vec_matrix created for input data")
                     
