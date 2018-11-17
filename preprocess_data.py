@@ -155,6 +155,7 @@ def load_short_movie_reviews():
 def load_imdb(data_directory):
     # data_dir = os.path.join(BASE_PATH, data_directory)
     data_dir = BASE_PATH/"data"/data_directory
+    print(data_dir)
     # pos_files = glob.glob(data_dir + "//*pos.txt")
     # neg_files = glob.glob(data_dir + "//*neg.txt")
     pos_files = [f for f in data_dir.glob("*pos.txt")]
@@ -167,7 +168,7 @@ def load_imdb(data_directory):
     for file in neg_files:
         neg_reviews.append([line.split() for line in open(file, "r", encoding='utf-8')])
     print("Negative reviews read into memory!")
-    num_reviews = len(pos_reviews) + len(neg_reviews)
+    num_reviews = len(pos_reviews[0]) + len(pos_reviews[1]) + len(neg_reviews[0]) + len(neg_reviews[1])
     print("The total number of reviews: ", num_reviews)
 
     labels = np.zeros((num_reviews, NUM_CLASSES))
