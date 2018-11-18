@@ -204,7 +204,7 @@ def make_wordvec_matrix(text, wordvec_file=WORD_VEC_FILE, max_seq_length=MAX_SEQ
     def to_wordvec(string):
         try:
             return wordvec_df.loc[string].tolist()
-        except e as KeyError:
+        except KeyError as e:
             return wordvec_df.iloc(399999) #returns vector for unknown words
 
     wordvec_matrix = wordvec_matrix.applymap(to_wordvec)
