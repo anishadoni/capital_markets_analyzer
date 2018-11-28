@@ -111,7 +111,7 @@ def load_word_vectors(filename):
     # filename = os.path.join(data_dir, filename)
     filename = data_dir/filename
     print('-------- loading pre-trained word vector matrix ----------')
-    raw_wordvec_file = open(filename, encoding = "utf8")
+    raw_wordvec_file = open(str(filename), encoding = "utf8")
     word_index = []
     raw_vectors = []
     for line in raw_wordvec_file:
@@ -170,11 +170,11 @@ def load_imdb(data_directory):
     neg_files = [f for f in data_dir.glob("*neg.txt")]
     pos_reviews = []
     for file in pos_files:
-        pos_reviews.append([map(cleanSentences, line.split()) for line in open(file, "r", encoding='utf-8')])
+        pos_reviews.append([map(cleanSentences, line.split()) for line in open(str(file), "r", encoding='utf-8')])
     print("Positive reviews read into memory!")
     neg_reviews = []
     for file in neg_files:
-        neg_reviews.append([line.split() for line in open(file, "r", encoding='utf-8')])
+        neg_reviews.append([line.split() for line in open(str(file), "r", encoding='utf-8')])
     print("Negative reviews read into memory!")
     num_reviews = len(pos_reviews[0]) + len(pos_reviews[1]) + len(neg_reviews[0]) + len(neg_reviews[1])
     print("The total number of reviews: ", num_reviews)
@@ -199,14 +199,13 @@ def make_wordvec_matrix(text, wordvec_file=WORD_VEC_FILE, max_seq_length=MAX_SEQ
 
     # updated implementation using pandas dataframes
     wordvec_matrix = pd.DataFrame(text).fillna('0')
-
     # pure function that returns the wordvec representation of a single word
     def to_wordvec(string):
+        print(string)
         try:
             return wordvec_df.loc[string].tolist()
-        except KeyError as e:
+        except:
             return wordvec_df.iloc(399999) #returns vector for unknown words
-
     wordvec_matrix = wordvec_matrix.applymap(to_wordvec)
 
     print("chunked word_vec_matrix created for input data")
@@ -265,5 +264,6 @@ def get_split_data(data, labels, train_split, test_split, cv_split):
     return (x_train, y_train, x_test, y_test, x_cv, y_cv)
 
 if __name__ == "__main__":
-    load_imdb("imdb_reviews")
+    raw_data, labels = load_imdb("imdb_reviews")
+    word_vec_data = make_wordvec_matrix(raw_data)
 
