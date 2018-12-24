@@ -12,6 +12,7 @@ os.chdir("data")
 
 def get_data():
 	# helper function for extracting zip files from kaggle downloads
+	os.chdir(str(BASE_PATH/"data"))
 	def zip_files():
 		for file in os.listdir():
 			zip_ref = zipfile.ZipFile(file, 'r')
