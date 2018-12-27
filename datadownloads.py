@@ -20,13 +20,13 @@ def get_data():
 
 	if not imdb_dir.exists():
 		imdb_dir.mkdir(exist_ok=True, parents=True)
-	os.chdir("imdb_reviews")
+	os.chdir(str(imdb_dir))
 	subprocess.run(["kaggle", "datasets", "download", "-d", "anishadoni/dataset-of-50000-imdb-reviews"])
 	zip_files()
 	os.chdir("../")
 	if not glove_dir.exists():
 		glove_dir.mkdir(exist_ok=True, parents=True)
-	os.chdir("glove_wordvec")
+	os.chdir(str(glove_dir))
 	subprocess.run(["kaggle", "datasets", "download", "-d", "anindya2906/glove6b"])
 	zip_files()
 	os.chdir('../../')
