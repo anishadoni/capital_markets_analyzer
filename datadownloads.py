@@ -11,7 +11,6 @@ glove_dir = BASE_PATH/"data"/"glove_wordvec"
 
 def get_data():
 	# helper function for extracting zip files from kaggle downloads
-	os.chdir("data")
 	def zip_files():
 		for file in os.listdir():
 			zip_ref = zipfile.ZipFile(file, 'r')
