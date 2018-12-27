@@ -8,11 +8,10 @@ from pathlib import Path
 BASE_PATH = Path.cwd()
 imdb_dir = BASE_PATH/"data"/"imdb_reviews"
 glove_dir = BASE_PATH/"data"/"glove_wordvec"
-os.chdir("data")
 
 def get_data():
 	# helper function for extracting zip files from kaggle downloads
-	os.chdir(str(BASE_PATH/"data"))
+	os.chdir("data")
 	def zip_files():
 		for file in os.listdir():
 			zip_ref = zipfile.ZipFile(file, 'r')
