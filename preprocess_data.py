@@ -201,11 +201,10 @@ def make_wordvec_matrix(text, wordvec_file=WORD_VEC_FILE, max_seq_length=MAX_SEQ
     wordvec_matrix = pd.DataFrame(text).fillna('0')
     # pure function that returns the wordvec representation of a single word
     def to_wordvec(string):
-        print(string)
         try:
-            return wordvec_df.loc[string].tolist()
+            return wordvec_df.loc[s.index.intersection(string)].tolist()
         except:
-            return wordvec_df.iloc(399999) #returns vector for unknown words
+            return list(np.random.rand(WORDVEC_LENGTH)) #returns vector for unknown words
     wordvec_matrix = wordvec_matrix.applymap(to_wordvec)
 
     print("chunked word_vec_matrix created for input data")
