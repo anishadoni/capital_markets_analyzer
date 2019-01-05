@@ -161,6 +161,8 @@ def cleanSentences(string):
     return re.sub(strip_special_chars, "", string.lower())
 
 def load_imdb(data_directory):
+    # NOTE TO SELF: ADD CHECK FOR DATA FILES
+
     # data_dir = os.path.join(BASE_PATH, data_directory)
     data_dir = BASE_PATH/"data"/data_directory
     print(data_dir)
@@ -189,25 +191,23 @@ def make_wordvec_matrix(text, wordvec_file=WORD_VEC_FILE, max_seq_length=MAX_SEQ
     wordvec_df = load_word_vectors(WORD_VEC_FILE)
     # assert len(wordvec_df.shape[-1]) == wordvec_length, "The dimensions of the word vector matrix used must match the length of wordvec_length provided"
     wordvec_length = wordvec_df.shape[-1]
-    # wordvec_matrix = np.zeros((len(text), max_seq_length, wordvec_length))
-    # for i, sample in enumerate(text):
-    #     for j, sample_element in enumerate(sample):
-    #         try:
-    #             wordvec_matrix[i][j][:] = wordvec_df.loc[text[i][j]].tolist()
-    #         except:
-    #             continue
 
     # updated implementation using pandas dataframes
     wordvec_matrix = pd.DataFrame(text).fillna('0')
+    print(wordvec_matrix.shape)
+
     # pure function that returns the wordvec representation of a single word
     def to_wordvec(string):
         try:
             return wordvec_df.loc[s.index.intersection(string)].tolist()
         except:
             return list(np.random.rand(WORDVEC_LENGTH)) #returns vector for unknown words
-    wordvec_matrix = wordvec_matrix.applymap(to_wordvec)
 
-    print("chunked word_vec_matrix created for input data")
+    # loops through the columns of the text matrix and replaces each word with it's respective word vector embedding
+    for i in range(max_seq_length):
+        wordvec_matrix[i] = wordvec_matrix.apply(to_wordvec, axis = 1)
+
+    print("word_vec_matrix created for input data")
                     
     return wordvec_matrix
 
