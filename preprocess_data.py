@@ -10,6 +10,7 @@ import glob
 import xml.etree.ElementTree as et
 import matplotlib.pyplot as plt
 from multiprocessing import Pool
+from functools import reduce
 import itertools
 import re
 
@@ -60,13 +61,13 @@ def load_tickers(filename):
     # new_product = et.SubElement(root, "company", attrib={"id": "9"})
     return _tickers
 
-# loads company hash values 
+# loads company hash values
 def load_company_hash(filename):
     _company_hash_list = []
     xml_file = BASE_PATH/"data"/"twitter"/filename
     tree = et.parse(str(xml_file))
     root = tree.getroot()
-    # check company_stock.xml in BASE_PATH//data to determine data storage format 
+    # check company_stock.xml in BASE_PATH//data to determine data storage format
     for child in root:
         _company_hash_list.append(child[1].text)
 
@@ -126,7 +127,7 @@ def load_short_movie_reviews():
     data_dir = join(BASE_PATH, "data\\short_reviews\\")
     pos_reviews_file = "positive.txt"
     neg_reviews_file = "negative.txt"
-    
+
     pos_reviews_raw = [line.split() for line in open(join(data_dir, pos_reviews_file), "r")]
     print("Positive reviews loaded.")
     neg_reviews_raw = [line.split() for line in open(join(data_dir, neg_reviews_file), "r")]
@@ -136,16 +137,16 @@ def load_short_movie_reviews():
     labels = np.zeros((num_reviews, NUM_CLASSES))
     labels[:len(pos_reviews_raw)] = [1,0]
     labels[len(pos_reviews_raw):] = [0,1]
-    
+
     num_words = [len(l) for l in pos_reviews_raw]
     num_words += [len(l) for l in neg_reviews_raw]
 
     num_samples = len(num_words)
     avg_len = sum(num_words)/num_samples
-    
+
     print('The total number of words is ', sum(num_words))
     print('The average number of words per review is ', avg_len)
-            
+
     # plt.hist(num_words, 50)
     # plt.xlabel('Sequence Length')
     # plt.ylabel('Frequency')
@@ -161,7 +162,7 @@ def cleanSentences(string):
     return re.sub(strip_special_chars, "", string.lower())
 
 def load_imdb(data_directory):
-    # NOTE TO SELF: ADD CHECK FOR DATA FILES
+    # NOTE: ADD CHECK FOR DATA FILES
 
     # data_dir = os.path.join(BASE_PATH, data_directory)
     data_dir = BASE_PATH/"data"/data_directory
@@ -192,8 +193,10 @@ def make_wordvec_matrix(text, wordvec_file=WORD_VEC_FILE, max_seq_length=MAX_SEQ
     # assert len(wordvec_df.shape[-1]) == wordvec_length, "The dimensions of the word vector matrix used must match the length of wordvec_length provided"
     wordvec_length = wordvec_df.shape[-1]
 
-    # updated implementation using pandas dataframes
-    wordvec_matrix = pd.DataFrame(text).fillna('0')
+    # creates a dataframe representation of the text, and formats it properly
+    # NOTE: this statement assumes that the text is formatted like so:
+    #               [[pos_train], [pos_test], [neg_train], [neg_test]]
+    wordvec_matrix = pd.DataFrame(reduce(lambda x, y: x + y, text, [])).fillna('0')
     print(wordvec_matrix.shape)
 
     # pure function that returns the wordvec representation of a single word
@@ -208,7 +211,7 @@ def make_wordvec_matrix(text, wordvec_file=WORD_VEC_FILE, max_seq_length=MAX_SEQ
         wordvec_matrix[i] = wordvec_matrix.apply(to_wordvec, axis = 1)
 
     print("word_vec_matrix created for input data")
-                    
+
     return wordvec_matrix
 
 def parallel_make_wordvec_matrix(text, wordvec_file, max_seq_length, num_processes):
@@ -247,22 +250,21 @@ def get_split_data(data, labels, train_split, test_split, cv_split):
     """
     Helper function for splitting data into training, cross_validation, and test.
     Data splits must be given in decimal form, e.g. train_split = 0.8, test_split = 0.1, cv_split = 0.1
-    
-    split_data(data, 0.7, 0.2, 0.1) would return 70% train, 20% test, 10% cross validation  
+
+    split_data(data, 0.7, 0.2, 0.1) would return 70% train, 20% test, 10% cross validation
     """
     assert train_split + test_split + cv_split <= 1.0, "Total split cannot include more than 100% of trainig data."
     num_samples = np.shape(data)[0]
     shuffle_in_unison(data, labels)
     splitpoint_a = math.floor(train_split*num_samples)
     splitpoint_b = math.floor((train_split + test_split)*num_samples)
-    
+
     x_train, y_train = data[0:splitpoint_a], labels[0:splitpoint_a]
     x_test, y_test = data[splitpoint_a:splitpoint_b], labels[splitpoint_a:splitpoint_b]
     x_cv, y_cv = data[splitpoint_b:], labels[splitpoint_b:]
-    
+
     return (x_train, y_train, x_test, y_test, x_cv, y_cv)
 
 if __name__ == "__main__":
     raw_data, labels = load_imdb("imdb_reviews")
     word_vec_data = make_wordvec_matrix(raw_data)
-
