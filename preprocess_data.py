@@ -163,22 +163,19 @@ def cleanSentences(string):
 
 def load_imdb(data_directory):
     # NOTE: ADD CHECK FOR DATA FILES
-
-    # data_dir = os.path.join(BASE_PATH, data_directory)
     data_dir = BASE_PATH/"data"/data_directory
-    print(data_dir)
-    # pos_files = glob.glob(data_dir + "//*pos.txt")
-    # neg_files = glob.glob(data_dir + "//*neg.txt")
     pos_files = [f for f in data_dir.glob("*pos.txt")]
     neg_files = [f for f in data_dir.glob("*neg.txt")]
     pos_reviews = []
     for file in pos_files:
-        pos_reviews.append([map(cleanSentences, line.split()) for line in open(str(file), "r", encoding='utf-8')])
+        pos_reviews.append([list(map(cleanSentences, line.split())) for line in open(str(file), "r", encoding='utf-8')])
     print("Positive reviews read into memory!")
+
     neg_reviews = []
     for file in neg_files:
         neg_reviews.append([line.split() for line in open(str(file), "r", encoding='utf-8')])
     print("Negative reviews read into memory!")
+    
     num_reviews = len(pos_reviews[0]) + len(pos_reviews[1]) + len(neg_reviews[0]) + len(neg_reviews[1])
     print("The total number of reviews: ", num_reviews)
 
@@ -190,9 +187,16 @@ def load_imdb(data_directory):
 
 def make_wordvec_matrix(text, wordvec_file=WORD_VEC_FILE, max_seq_length=MAX_SEQ_LENGTH):
     wordvec_df = load_word_vectors(WORD_VEC_FILE)
-    # assert len(wordvec_df.shape[-1]) == wordvec_length, "The dimensions of the word vector matrix used must match the length of wordvec_length provided"
     wordvec_length = wordvec_df.shape[-1]
-
+    text_full = []
+    for l in text:
+    	text_full += l
+    delete_indices = []
+    for i in range(len(text_full)):
+    	if len(text_full[i]) > max_seq_length:
+    		delete_indices.append(i)
+    for n in reversed(delete_indices):
+    	del(text_full[n])
     # creates a dataframe representation of the text, and formats it properly
     # NOTE: this statement assumes that the text is formatted like so:
     #               [[pos_train], [pos_test], [neg_train], [neg_test]]
