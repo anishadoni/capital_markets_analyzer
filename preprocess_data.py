@@ -18,7 +18,7 @@ import re
 BASE_PATH = Path.cwd()
 NUM_WORD_EMBEDDINGS = 400000 # number of word embeddings used
 MAX_SEQ_LENGTH_SHORT = 50
-MAX_SEQ_LENGTH = 250
+MAX_SEQ_LENGTH = 500
 WORDVEC_LENGTH = 50
 NUM_CLASSES = 2
 NUM_PROCESSES = 4 # ideally should be set to number of cores on cpu
@@ -168,14 +168,14 @@ def load_imdb(data_directory):
     neg_files = [f for f in data_dir.glob("*neg.txt")]
     pos_reviews = []
     for file in pos_files:
-        pos_reviews.append([list(map(cleanSentences, line.split())) for line in open(str(file), "r", encoding='utf-8')])
+        pos_reviews.append([list(map(cleanSentences, line.split())) for line in open(str(file), "r", encoding='utf-8') if len(line.split()) <= MAX_SEQ_LENGTH])
     print("Positive reviews read into memory!")
 
     neg_reviews = []
     for file in neg_files:
-        neg_reviews.append([line.split() for line in open(str(file), "r", encoding='utf-8')])
+        neg_reviews.append([list(map(cleanSentences, line.split())) for line in open(str(file), "r", encoding='utf-8') if len(line.split()) <= MAX_SEQ_LENGTH])
     print("Negative reviews read into memory!")
-    
+
     num_reviews = len(pos_reviews[0]) + len(pos_reviews[1]) + len(neg_reviews[0]) + len(neg_reviews[1])
     print("The total number of reviews: ", num_reviews)
 
@@ -188,19 +188,15 @@ def load_imdb(data_directory):
 def make_wordvec_matrix(text, wordvec_file=WORD_VEC_FILE, max_seq_length=MAX_SEQ_LENGTH):
     wordvec_df = load_word_vectors(WORD_VEC_FILE)
     wordvec_length = wordvec_df.shape[-1]
-    text_full = []
-    for l in text:
-    	text_full += l
-    delete_indices = []
-    for i in range(len(text_full)):
-    	if len(text_full[i]) > max_seq_length:
-    		delete_indices.append(i)
-    for n in reversed(delete_indices):
-    	del(text_full[n])
+    text_formatted = reduce(lambda x, y: x + y, text, [])
+    # delete_indices = []
+    # for i in range(len(text_full)):
+    # 	if len(text_full[i]) > max_seq_length:
+    # 		delete_indices.append(i)
+    # for n in reversed(delete_indices):
+    # 	del(text_full[n])
     # creates a dataframe representation of the text, and formats it properly
-    # NOTE: this statement assumes that the text is formatted like so:
-    #               [[pos_train], [pos_test], [neg_train], [neg_test]]
-    wordvec_matrix = pd.DataFrame(reduce(lambda x, y: x + y, text, [])).fillna('0')
+    wordvec_matrix = pd.DataFrame(text_formatted).fillna('0')
     print(wordvec_matrix.shape)
 
     # pure function that returns the wordvec representation of a single word
@@ -211,7 +207,7 @@ def make_wordvec_matrix(text, wordvec_file=WORD_VEC_FILE, max_seq_length=MAX_SEQ
             return list(np.random.rand(WORDVEC_LENGTH)) #returns vector for unknown words
 
     # loops through the columns of the text matrix and replaces each word with it's respective word vector embedding
-    for i in range(max_seq_length):
+    for i in range(word_vec_matrix.shape[1]):
         wordvec_matrix[i] = wordvec_matrix.apply(to_wordvec, axis = 1)
 
     print("word_vec_matrix created for input data")
