@@ -25,7 +25,7 @@ NUM_PROCESSES = 4 # ideally should be set to number of cores on cpu
 WORD_VEC_FILE = "glove.6B.50d.txt"
 
 def load_company_frame(filename):
-    # xml_file = join(BASE_PATH, "data//twitter//" + filename)
+    
     xml_file = BASE_PATH/"data"/"twitter"/filename
 
     tree = et.parse(str(xml_file))
@@ -188,13 +188,9 @@ def load_imdb(data_directory):
 def make_wordvec_matrix(text, wordvec_file=WORD_VEC_FILE, max_seq_length=MAX_SEQ_LENGTH):
     wordvec_df = load_word_vectors(WORD_VEC_FILE)
     wordvec_length = wordvec_df.shape[-1]
+
+    # properly formats text from [[train],[test]] to [all_data]
     text_formatted = reduce(lambda x, y: x + y, text, [])
-    # delete_indices = []
-    # for i in range(len(text_full)):
-    # 	if len(text_full[i]) > max_seq_length:
-    # 		delete_indices.append(i)
-    # for n in reversed(delete_indices):
-    # 	del(text_full[n])
     # creates a dataframe representation of the text, and formats it properly
     wordvec_matrix = pd.DataFrame(text_formatted).fillna('0')
     print(wordvec_matrix.shape)
@@ -207,10 +203,10 @@ def make_wordvec_matrix(text, wordvec_file=WORD_VEC_FILE, max_seq_length=MAX_SEQ
             return list(np.random.rand(WORDVEC_LENGTH)) #returns vector for unknown words
 
     # loops through the columns of the text matrix and replaces each word with it's respective word vector embedding
-    for i in range(word_vec_matrix.shape[1]):
+    for i in range(wordvec_matrix.shape[1]):
         wordvec_matrix[i] = wordvec_matrix.apply(to_wordvec, axis = 1)
 
-    print("word_vec_matrix created for input data")
+    print("wordvec_matrix created for input data")
 
     return wordvec_matrix
 
