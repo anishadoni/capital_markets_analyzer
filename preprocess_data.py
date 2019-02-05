@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import h5py
 import os
 import math
 from os.path import isfile, join, dirname
@@ -154,6 +155,37 @@ def load_short_movie_reviews():
     # plt.show()
     return pos_reviews_raw + neg_reviews_raw, labels
 
+def format_movie_reviews(data_directory):
+    """
+    This function 'cleans' the imdb movie review dataset and stores it as
+    a single .h5 file.
+    """
+    text_raw, labels = load_imdb(data_directory)
+    wordvec_df = load_word_vectors(WORD_VEC_FILE)
+    wordvec_length = wordvec_df.shape[-1]
+
+    # properly formats text from [[train],[test]] to [all_data]
+    text_formatted = reduce(lambda x, y: x + y, text_raw, [])
+    # creates a dataframe representation of the text, and formats it properly
+    wordvec_matrix = pd.DataFrame(text_formatted).fillna('0')
+    print(wordvec_matrix.shape)
+
+    # pure function that returns the wordvec representation of a single word
+    def to_wordvec(string):
+        try:
+            return wordvec_df.loc[s.index.intersection(string)].tolist()
+        except:
+            return list(np.random.rand(WORDVEC_LENGTH)) #returns vector for unknown words
+
+    # loops through the columns of the text matrix and replaces each word with it's respective word vector embedding
+    for i in range(wordvec_matrix.shape[1]):
+        wordvec_matrix[i] = wordvec_matrix.apply(to_wordvec, axis = 1)
+    os.chdir(str(BASE_PATH/"data"/data_directory))
+    wordvec_matrix.to_hdf("reviews.h5", key="review_x", mode="w")
+    with h5py.File("review_data.h5", "w") as f:
+        f.create_dataset("review_y", data=np.array(labels), dtype="float32")
+    os.chdir("../../")
+
 # helper function for removing special characters from strings
 strip_special_chars = re.compile("[^A-Za-z0-9 ]+")
 
@@ -180,8 +212,8 @@ def load_imdb(data_directory):
     print("The total number of reviews: ", num_reviews)
 
     labels = np.zeros((num_reviews, NUM_CLASSES))
-    labels[:len(pos_reviews)] = [1,0]
-    labels[len(neg_reviews):] = [0,1]
+    labels[:len(pos_reviews)] = 1
+    labels[len(neg_reviews):] = 0
 
     return pos_reviews + neg_reviews, labels
 
@@ -260,7 +292,3 @@ def get_split_data(data, labels, train_split, test_split, cv_split):
     x_cv, y_cv = data[splitpoint_b:], labels[splitpoint_b:]
 
     return (x_train, y_train, x_test, y_test, x_cv, y_cv)
-
-if __name__ == "__main__":
-    raw_data, labels = load_imdb("imdb_reviews")
-    word_vec_data = make_wordvec_matrix(raw_data)
