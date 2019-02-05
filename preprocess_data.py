@@ -18,14 +18,14 @@ import re
 BASE_PATH = Path.cwd()
 NUM_WORD_EMBEDDINGS = 400000 # number of word embeddings used
 MAX_SEQ_LENGTH_SHORT = 50
-MAX_SEQ_LENGTH = 500
+MAX_SEQ_LENGTH = 250
 WORDVEC_LENGTH = 50
 NUM_CLASSES = 2
 NUM_PROCESSES = 4 # ideally should be set to number of cores on cpu
 WORD_VEC_FILE = "glove.6B.50d.txt"
 
 def load_company_frame(filename):
-    
+
     xml_file = BASE_PATH/"data"/"twitter"/filename
 
     tree = et.parse(str(xml_file))
