@@ -57,51 +57,50 @@ def train_multi_models(vn, lstm_1_size, drop_1_size, epoch_size):
     # epoch_size = [200]
     date = datetime.datetime.now()
     raw_data, labels = load_imdb("imdb_reviews")
-    word_vec_data = make_wordvec_matrix(raw_data)
 
     for l in lstm_1_size:
         for d in drop_1_size:
             for e in epoch_size:
                 try:
-                    train_lstm(word_vec_data, labels, "{0}-{1}-{2}_lstm_model".format(date.month, date.day, date.year) + str(vn) + "_f1_" + str(e), batch_size, e, l, d)
+                    train_lstm(make_wordvec_matrix(raw_data), labels, "{0}-{1}-{2}_lstm_model".format(date.month, date.day, date.year) + str(vn) + "_f1_" + str(e), batch_size, e, l, d)
                     vn +=1
                 except:
                     continue
-                
+
 def f1(y_true, y_pred):
     def recall(y_true, y_pred):
         """Recall metric.
-        
+
         Only computes a batch_wise average of recall.
-        
+
         Computes the recall, a metric for multi-label classification of
         how many relevant items are selected.
         """
-        
+
         true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
         possible_positives = K.sum(K.round(K.clip(y_true, 0, 1)))
         recall = true_positives / (possible_positives + K.epsilon())
         return recall
-    
+
     def precision(y_true, y_pred):
         """Precision metric.
-        
+
         Only computes a batch_wise average of precision.
-        
+
         Computes the precision, a metric for multi-label classification of
         how many selected items are relevant.
         """
-        
+
         true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
         predicted_positives = K.sum(K.round(K.clip(y_pred, 0, 1)))
         precision = true_positives / (predicted_positives + K.epsilon())
         return precision
     precision = precision(y_true, y_pred)
-    recall = recall(y_true, y_pred)    
+    recall = recall(y_true, y_pred)
     return 2*((precision*recall)/(precision+recall))
 
 
-def train_lstm(data, labels, snapshot_filename, batch_size, max_epochs, lstm_1, drop_1):    
+def train_lstm(data, labels, snapshot_filename, batch_size, max_epochs, lstm_1, drop_1):
     input_dim = np.shape(data)
     label_dim = np.shape(labels)
     assert len(input_dim) == 3, "Input data must have dimensions [num_samples, num words in sample, dimension of word vectors]"
@@ -113,12 +112,12 @@ def train_lstm(data, labels, snapshot_filename, batch_size, max_epochs, lstm_1, 
     # TEMPORARY DEFINITIONS FOR TRAINING, CV, AND TEST SPLITS -> change to pass in as func args
     train_split = 0.7
     cv_split = 0.2
-    test_split = 0.1 
+    test_split = 0.1
     # split data into train, cv, and test using helper function from preprocess_data
     x_train, y_train, x_test, y_test, x_cv, y_cv = get_split_data(data, labels, train_split, test_split, cv_split)
     # determine input shape for lstm
     input_shape = (sample_text_len, word_vector_dimension)
-    
+
     # create a tensorboard callback file and log directory
     tensorboard_path_dir = SNAPSHOT_PREFIX/"logs"/snapshot_filename
     if not tensorboard_path_dir.exists():
@@ -126,7 +125,7 @@ def train_lstm(data, labels, snapshot_filename, batch_size, max_epochs, lstm_1, 
 
     tbCallBack = keras.callbacks.TensorBoard(
         log_dir= tensorboard_path_dir,
-        histogram_freq=10, 
+        histogram_freq=10,
         batch_size=32,
         write_graph=True,
         write_grads=False,
@@ -146,7 +145,7 @@ def train_lstm(data, labels, snapshot_filename, batch_size, max_epochs, lstm_1, 
     print(model.output_shape)
     model.add(Activation('softmax'))
     print(model.output_shape)
-    
+
     metrics_test = Metrics()
     model.compile(loss='binary_crossentropy', optimizer='adam', metrics=[f1])
     model.fit(
@@ -157,23 +156,23 @@ def train_lstm(data, labels, snapshot_filename, batch_size, max_epochs, lstm_1, 
         verbose=1,
         validation_data=(x_cv, y_cv),
         callbacks=[tbCallBack])
-    
+
     score = model.evaluate(x_test, y_test, verbose=0)
     score_train = model.evaluate(x_cv, y_cv, verbose=0)
     score_cv = model.evaluate(x_train, y_train, verbose=0)
-    
+
     print('Train loss:', score_train[0])
     print('Train accuracy:', score_train[1])
     print('Val loss:', score_cv[0])
     print('Val accuracy:', score_cv[1])
     print('Test loss:', score[0])
     print('Test accuracy:', score[1])
-    
+
     # saves the model along with accompanying text detailing train, test, and cv scores
     if not SNAPSHOT_PREFIX.exists():
         SNAPSHOT_PREFIX.mkdir(exist_ok=True, parents=False)
     model.save(str(SNAPSHOT_PREFIX/snapshot_filename/'.h5'))
-    
+
     snapshot_text = open(SNAPSHOT_PREFIX + snapshot_filename + '.txt', 'w')
     snapshot_text.write(snapshot_filename + ' information:\n')
     snapshot_text.write('Max length of text = ' + str(sample_text_len) + '\n')
@@ -192,4 +191,3 @@ def train_lstm(data, labels, snapshot_filename, batch_size, max_epochs, lstm_1, 
     snapshot_text.write('Val Accuracy = ' + str(score_cv[1]) + '\n')
     snapshot_text.write('Test Loss = ' + str(score[0]) + '\n')
     snapshot_text.write('Test Accuracy = ' + str(score[1]) + '\n')
-
