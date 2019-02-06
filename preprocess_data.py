@@ -217,6 +217,22 @@ def load_imdb(data_directory):
 
     return pos_reviews + neg_reviews, labels
 
+# NOTE WORK IN PROGRESS
+# def generate_raw_reviews(data_directory, batch_size):
+#     data_dir = BASE_PATH/"data"/data_directory
+#     pos_files = [f for f in data_dir.glob("*pos.txt")]
+#     neg_files = [f for f in data_dir.glob("*neg.txt")]
+#
+#     all_files = pos_files + neg_files
+#     num_samples_file = sum(1 for line in open(all_files[0]))
+#     idx_list = list(range(num_samples_file/batch_size))
+#     while True:
+#         for f in files:
+#             for idx in idx_list:
+#                 yield [line for ]
+
+
+
 def make_wordvec_matrix(text, wordvec_file=WORD_VEC_FILE, max_seq_length=MAX_SEQ_LENGTH):
     wordvec_df = load_word_vectors(WORD_VEC_FILE)
     wordvec_length = wordvec_df.shape[-1]
