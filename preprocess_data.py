@@ -19,10 +19,11 @@ import re
 BASE_PATH = Path.cwd()
 NUM_WORD_EMBEDDINGS = 400000 # number of word embeddings used
 MAX_SEQ_LENGTH_SHORT = 50
-MAX_SEQ_LENGTH = 250
+MAX_SEQ_LENGTH = 2500
 WORDVEC_LENGTH = 50
 NUM_CLASSES = 2
 NUM_PROCESSES = 4 # ideally should be set to number of cores on cpu
+NUM_REVIEWS = 50000
 WORD_VEC_FILE = "glove.6B.50d.txt"
 
 def load_company_frame(filename):
@@ -155,20 +156,18 @@ def load_short_movie_reviews():
     # plt.show()
     return pos_reviews_raw + neg_reviews_raw, labels
 
-def format_movie_reviews(data_directory):
+
+def format_movie_reviews(data_directory, batch_size=100, use_generator=False):
     """
     This function 'cleans' the imdb movie review dataset and stores it as
     a single .h5 file.
+    NOTE
+    This function as written relies on hardcoding the number of reviewsself.
+    Remember to fix in the future, maybe by adding a .txt file outlining the
+    relevant format of the data, like number of classes, number of training
+    and testing samples, etc.
     """
-    text_raw, labels = load_imdb(data_directory)
-    wordvec_df = load_word_vectors(WORD_VEC_FILE)
-    wordvec_length = wordvec_df.shape[-1]
-
-    # properly formats text from [[train],[test]] to [all_data]
-    text_formatted = reduce(lambda x, y: x + y, text_raw, [])
-    # creates a dataframe representation of the text, and formats it properly
-    wordvec_matrix = pd.DataFrame(text_formatted).fillna('0')
-    print(wordvec_matrix.shape)
+    # TODO: Add functionality to automatically calculate shape of dataset.
 
     # pure function that returns the wordvec representation of a single word
     def to_wordvec(string):
@@ -177,11 +176,41 @@ def format_movie_reviews(data_directory):
         except:
             return list(np.random.rand(WORDVEC_LENGTH)) #returns vector for unknown words
 
+    wordvec_df = load_word_vectors(WORD_VEC_FILE)
+    wordvec_length = wordvec_df.shape[-1]
+
+    os.chdir(str(BASE_PATH/"data"/data_directory))
+    if use_generator:
+        labels = np.zeros(NUM_REVIEWS)
+        labels[:(NUM_REVIEWS//2)] = 1
+
+        for idx, text_chunk in enumerate(generate_raw_reviews(data_directory, batch_size)):
+            wordvec_matrix = pd.DataFrame(text_chunk).fillna(0)
+
+            for i in range(wordvec_matrix.shape[1]):
+                wordvec_matrix[i] = wordvec_matrix.apply(to_wordvec, axis=1)
+            with h5py.File("review_data.h5") as f:
+                dst = f.create_dataset("review_x", shape=(NUM_REVIEWS, 2470, WORDVEC_LENGTH)) #add automation to detect shape of input data required
+                dst[idx*batch_size:(idx+1)*batch_size] = wordvec_matrix.values
+                # wordvec_matrix.to_hdf("review_data.h5", key="review_x", append=True, compression=2, mode="a")
+        with h5py.File("review_data.h5", "a") as f:
+            f.create_dataset("review_y", data=labels, dtype="float32")
+        return
+
+
+    text_raw, labels = load_imdb(data_directory)
+
+    # properly formats text from [[train],[test]] to [all_data]
+    text_formatted = reduce(lambda x, y: x + y, text_raw, [])
+    # creates a dataframe representation of the text, and formats it properly
+    wordvec_matrix = pd.DataFrame(text_formatted).fillna('0')
+    print(wordvec_matrix.shape)
+
     # loops through the columns of the text matrix and replaces each word with it's respective word vector embedding
     for i in range(wordvec_matrix.shape[1]):
         wordvec_matrix[i] = wordvec_matrix.apply(to_wordvec, axis = 1)
     os.chdir(str(BASE_PATH/"data"/data_directory))
-    wordvec_matrix.to_hdf("reviews.h5", key="review_x", mode="w")
+    wordvec_matrix.to_hdf("review_data.h5", key="review_x", mode="w")
     with h5py.File("review_data.h5", "w") as f:
         f.create_dataset("review_y", data=np.array(labels), dtype="float32")
     os.chdir("../../")
@@ -211,27 +240,31 @@ def load_imdb(data_directory):
     num_reviews = len(pos_reviews[0]) + len(pos_reviews[1]) + len(neg_reviews[0]) + len(neg_reviews[1])
     print("The total number of reviews: ", num_reviews)
 
-    labels = np.zeros((num_reviews, NUM_CLASSES))
+    # NOTE the number of reviews here is hardcoded, remember to fix later
+    labels = np.zeros(NUM_REVIEWS)
     labels[:len(pos_reviews)] = 1
     labels[len(neg_reviews):] = 0
+
 
     return pos_reviews + neg_reviews, labels
 
 # NOTE WORK IN PROGRESS
-# def generate_raw_reviews(data_directory, batch_size):
-#     data_dir = BASE_PATH/"data"/data_directory
-#     pos_files = [f for f in data_dir.glob("*pos.txt")]
-#     neg_files = [f for f in data_dir.glob("*neg.txt")]
-#
-#     all_files = pos_files + neg_files
-#     num_samples_file = sum(1 for line in open(all_files[0]))
-#     idx_list = list(range(num_samples_file/batch_size))
-#     while True:
-#         for f in files:
-#             for idx in idx_list:
-#                 yield [line for ]
+def generate_raw_reviews(data_directory, batch_size):
+    data_dir = BASE_PATH/"data"/data_directory
+    pos_files = [f for f in data_dir.glob("*pos.txt")]
+    neg_files = [f for f in data_dir.glob("*neg.txt")]
 
-
+    all_files = pos_files + neg_files
+    num_samples_file = sum(1 for line in open(all_files[0]))
+    idx_list = list(range(num_samples_file//batch_size))
+    counter = 0
+    for f in all_files:
+        with open(str(f), "r", encoding='utf-8') as file:
+            while True:
+                text_chunk = [list(map(cleanSentences, line.split())) for line in list(itertools.islice(file, batch_size))]
+                if not text_chunk:
+                    break
+                yield text_chunk
 
 def make_wordvec_matrix(text, wordvec_file=WORD_VEC_FILE, max_seq_length=MAX_SEQ_LENGTH):
     wordvec_df = load_word_vectors(WORD_VEC_FILE)
