@@ -157,7 +157,7 @@ def load_short_movie_reviews():
     return pos_reviews_raw + neg_reviews_raw, labels
 
 
-def format_movie_reviews(data_directory, batch_size=100, use_generator=False):
+def format_movie_reviews(data_directory, batch_size=100, use_generator=True):
     """
     This function 'cleans' the imdb movie review dataset and stores it as
     a single .h5 file.
@@ -172,9 +172,9 @@ def format_movie_reviews(data_directory, batch_size=100, use_generator=False):
     # pure function that returns the wordvec representation of a single word
     def to_wordvec(string):
         try:
-            return wordvec_df.loc[s.index.intersection(string)].tolist()
+            return wordvec_df.loc[s.index.intersection(string)].as_matrix()
         except:
-            return list(np.random.rand(WORDVEC_LENGTH)) #returns vector for unknown words
+            return (np.random.rand(WORDVEC_LENGTH)) #returns vector for unknown words
 
     wordvec_df = load_word_vectors(WORD_VEC_FILE)
     wordvec_length = wordvec_df.shape[-1]
@@ -184,18 +184,25 @@ def format_movie_reviews(data_directory, batch_size=100, use_generator=False):
         labels = np.zeros(NUM_REVIEWS)
         labels[:(NUM_REVIEWS//2)] = 1
 
-        for idx, text_chunk in enumerate(generate_raw_reviews(data_directory, batch_size)):
-            wordvec_matrix = pd.DataFrame(text_chunk).fillna(0)
+        with h5py.File("review_data.h5") as f:
+            dst = f.create_dataset("review_x", shape=(NUM_REVIEWS, 2470, WORDVEC_LENGTH))
+            f.create_dataset("review_y", data=labels)
 
-            for i in range(wordvec_matrix.shape[1]):
-                wordvec_matrix[i] = wordvec_matrix.apply(to_wordvec, axis=1)
-            with h5py.File("review_data.h5") as f:
-                dst = f.create_dataset("review_x", shape=(NUM_REVIEWS, 2470, WORDVEC_LENGTH)) #add automation to detect shape of input data required
-                dst[idx*batch_size:(idx+1)*batch_size] = wordvec_matrix.values
-                # wordvec_matrix.to_hdf("review_data.h5", key="review_x", append=True, compression=2, mode="a")
-        with h5py.File("review_data.h5", "a") as f:
-            f.create_dataset("review_y", data=labels, dtype="float32")
-        return
+            for idx, text_chunk in enumerate(generate_raw_reviews(data_directory, batch_size)):
+                wordvec_matrix = pd.DataFrame(text_chunk).fillna(0)
+                saved_matrix = np.zeros((wordvec_matrix.shape[0], wordvec_matrix.shape[1], WORDVEC_LENGTH))
+
+                if saved_matrix.shape[1] < 2470:
+                    saved_matrix = np.concatenate((saved_matrix, np.zeros((saved_matrix.shape[0], 2470-saved_matrix.shape[1], saved_matrix.shape[2]))), axis=1)
+                    for i in range(wordvec_matrix.shape[0]):
+                        output = np.transpose(wordvec_matrix.apply(to_wordvec, axis = 0).values)
+                        saved_matrix[i][:output.shape[0]] = output
+                        # wordvec_matrix[i] = wordvec_matrix.apply(to_wordvec, axis=1)
+
+                        #add automation to detect shape of input data required
+                dst[idx*batch_size:(idx+1)*batch_size] = saved_matrix
+        return None
+                    # wordvec_matrix.to_hdf("review_data.h5", key="review_x", append=True, compression=2, mode="a")
 
 
     text_raw, labels = load_imdb(data_directory)
