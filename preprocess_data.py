@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 from multiprocessing import Pool
 from functools import reduce
 import itertools
+import random
 import re
 
 # BASE_PATH = dirname(os.path.realpath(__file__))
@@ -157,7 +158,7 @@ def load_short_movie_reviews():
     return pos_reviews_raw + neg_reviews_raw, labels
 
 
-def format_movie_reviews(data_directory, batch_size=100, use_generator=True):
+def format_movie_reviews(data_path, batch_size=100, use_generator=True):
     """
     This function 'cleans' the imdb movie review dataset and stores it as
     a single .h5 file.
@@ -169,8 +170,10 @@ def format_movie_reviews(data_directory, batch_size=100, use_generator=True):
     """
     # TODO: Add functionality to automatically calculate shape of dataset.
 
-    # pure function that returns the wordvec representation of a single word
     def to_wordvec(string):
+    	"""
+    	Pure function that returns the word vector embedding of a single word.
+    	"""
         try:
             return wordvec_df.loc[s.index.intersection(string)].as_matrix()
         except:
@@ -179,7 +182,7 @@ def format_movie_reviews(data_directory, batch_size=100, use_generator=True):
     wordvec_df = load_word_vectors(WORD_VEC_FILE)
     wordvec_length = wordvec_df.shape[-1]
 
-    os.chdir(str(BASE_PATH/"data"/data_directory))
+    os.chdir(str(data_path))
     if use_generator:
         labels = np.zeros(NUM_REVIEWS)
         labels[:(NUM_REVIEWS//2)] = 1
@@ -203,7 +206,6 @@ def format_movie_reviews(data_directory, batch_size=100, use_generator=True):
                 dst[idx*batch_size:(idx+1)*batch_size] = saved_matrix
         return None
                     # wordvec_matrix.to_hdf("review_data.h5", key="review_x", append=True, compression=2, mode="a")
-
 
     text_raw, labels = load_imdb(data_directory)
 
@@ -229,11 +231,10 @@ def cleanSentences(string):
     string = string.lower().replace("<br />", " ")
     return re.sub(strip_special_chars, "", string.lower())
 
-def load_imdb(data_directory):
+def load_imdb(data_path):
     # NOTE: ADD CHECK FOR DATA FILES
-    data_dir = BASE_PATH/"data"/data_directory
-    pos_files = [f for f in data_dir.glob("*pos.txt")]
-    neg_files = [f for f in data_dir.glob("*neg.txt")]
+    pos_files = [f for f in data_path.glob("*pos.txt")]
+    neg_files = [f for f in data_path.glob("*neg.txt")]
     pos_reviews = []
     for file in pos_files:
         pos_reviews.append([list(map(cleanSentences, line.split())) for line in open(str(file), "r", encoding='utf-8') if len(line.split()) <= MAX_SEQ_LENGTH])
@@ -256,15 +257,13 @@ def load_imdb(data_directory):
     return pos_reviews + neg_reviews, labels
 
 # NOTE WORK IN PROGRESS
-def generate_raw_reviews(data_directory, batch_size):
+def generate_raw_reviews(data_directory, batch_size, flag):
     data_dir = BASE_PATH/"data"/data_directory
-    pos_files = [f for f in data_dir.glob("*pos.txt")]
-    neg_files = [f for f in data_dir.glob("*neg.txt")]
+    pos_files = [f for f in data_dir.glob(flag + "pos.txt")]
+    neg_files = [f for f in data_dir.glob(flag + "neg.txt")]
 
     all_files = pos_files + neg_files
     num_samples_file = sum(1 for line in open(all_files[0]))
-    idx_list = list(range(num_samples_file//batch_size))
-    counter = 0
     for f in all_files:
         with open(str(f), "r", encoding='utf-8') as file:
             while True:
@@ -272,6 +271,25 @@ def generate_raw_reviews(data_directory, batch_size):
                 if not text_chunk:
                     break
                 yield text_chunk
+
+def create_val_raw_reviews(data_path):
+	pos_files = [data_path/"train_pos.txt"]
+	neg_file = [data_path/"train_neg.txt"]
+	num_samples_file = sum(1 for line in open(pos_files[0]))
+	length_val = (int) 0.3 * num_samples_file
+	g = random.randint(0, num_samples_file - length_val)
+	for f in pos_files:
+		with open(str(f), "r", encoding='utf-8') as file:
+			val_lines = list(itertools.islice(file, start = g, stop = g+length_val))
+		with open('val_pos.txt', 'w', encoding = 'utf-8') as val_file:
+			for line in val_lines:
+				val_file.write(line)
+	for f in neg_files:
+		with open(str(f), "r", encoding='utf-8') as file:
+			val_lines = list(itertools.islice(file, start = g, stop = g+length_val))
+		with open('val_neg.txt', 'w', encoding = 'utf-8') as val_file:
+			for line in val_lines:
+				val_file.write(line)
 
 def make_wordvec_matrix(text, wordvec_file=WORD_VEC_FILE, max_seq_length=MAX_SEQ_LENGTH):
     wordvec_df = load_word_vectors(WORD_VEC_FILE)
@@ -297,38 +315,6 @@ def make_wordvec_matrix(text, wordvec_file=WORD_VEC_FILE, max_seq_length=MAX_SEQ
     print("wordvec_matrix created for input data")
 
     return wordvec_matrix
-
-def parallel_make_wordvec_matrix(text, wordvec_file, max_seq_length, num_processes):
-    """
-    Creates a word vector matrix from input text, where input text is given in the form of a list
-    of string lists, e.g. text = [['the', 'quick', 'brown', 'fox'],
-                           ['jumped', 'over', 'the']
-                           ['betty', 'batter', 'had', 'some', 'batter']]
-    """
-    def chunk_matrix(seq, num):
-        """
-        Helper function to help split a matrix seq into num chunks along axis 0
-        >>> a = [1,2,3,4,5,6,7,8,9,10]
-        >>> chunk_matrix(a, 5)
-        [[1,2],[3,4],[5,6],[7,8],[9,10]]
-        """
-        avg = len(seq) / float(num)
-        out = []
-        last = 0.0
-
-        while last < len(seq):
-            out.append(seq[int(last):int(last + avg)])
-            last += avg
-
-        return out
-
-    def execute_make_wordvec_matrix(num_processes):
-        with Pool(num_processes) as p:
-            return list(itertools.chain.from_iterable(p.map(lambda x: make_wordvec_matrix(x, wordvec_file, max_seq_length),
-                chunk_matrix(text, num_processes))))
-
-
-    return execute_make_wordvec_matrix(num_processes)
 
 def get_split_data(data, labels, train_split, test_split, cv_split):
     """

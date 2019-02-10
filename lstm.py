@@ -31,6 +31,7 @@ class Metrics(keras.callbacks.Callback):
     def on_train_begin(self, logs={}):
         # self.confusion = []
         # self.precision = []
+        
         # self.recall = []
         # self.f1s = []
         # self.kappa = []
