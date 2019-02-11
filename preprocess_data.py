@@ -158,7 +158,7 @@ def load_short_movie_reviews():
     return pos_reviews_raw + neg_reviews_raw, labels
 
 
-def format_movie_reviews(data_path, batch_size=100, use_generator=True):
+def format_movie_reviews(data_path, flag="train", batch_size=100, use_generator=True):
     """
     This function 'cleans' the imdb movie review dataset and stores it as
     a single .h5 file.
@@ -171,9 +171,6 @@ def format_movie_reviews(data_path, batch_size=100, use_generator=True):
     # TODO: Add functionality to automatically calculate shape of dataset.
 
     def to_wordvec(string):
-    	"""
-    	Pure function that returns the word vector embedding of a single word.
-    	"""
         try:
             return wordvec_df.loc[s.index.intersection(string)].as_matrix()
         except:
@@ -188,10 +185,10 @@ def format_movie_reviews(data_path, batch_size=100, use_generator=True):
         labels[:(NUM_REVIEWS//2)] = 1
 
         with h5py.File("review_data.h5") as f:
-            dst = f.create_dataset("review_x", shape=(NUM_REVIEWS, 2470, WORDVEC_LENGTH))
-            f.create_dataset("review_y", data=labels)
+            dst = f.create_dataset("x_" + flag, shape=(NUM_REVIEWS, 2470, WORDVEC_LENGTH))
+            f.create_dataset("y_" + flag, data=labels)
 
-            for idx, text_chunk in enumerate(generate_raw_reviews(data_directory, batch_size)):
+            for idx, text_chunk in enumerate(generate_raw_reviews(data_directory, "train", batch_size)):
                 wordvec_matrix = pd.DataFrame(text_chunk).fillna(0)
                 saved_matrix = np.zeros((wordvec_matrix.shape[0], wordvec_matrix.shape[1], WORDVEC_LENGTH))
 
@@ -233,8 +230,8 @@ def cleanSentences(string):
 
 def load_imdb(data_path):
     # NOTE: ADD CHECK FOR DATA FILES
-    pos_files = [f for f in data_path.glob("*pos.txt")]
-    neg_files = [f for f in data_path.glob("*neg.txt")]
+    pos_files = [f for f in data_path.glob(flag + "*pos.txt")]
+    neg_files = [f for f in data_path.glob(flag + "*neg.txt")]
     pos_reviews = []
     for file in pos_files:
         pos_reviews.append([list(map(cleanSentences, line.split())) for line in open(str(file), "r", encoding='utf-8') if len(line.split()) <= MAX_SEQ_LENGTH])
@@ -257,10 +254,10 @@ def load_imdb(data_path):
     return pos_reviews + neg_reviews, labels
 
 # NOTE WORK IN PROGRESS
-def generate_raw_reviews(data_directory, batch_size, flag):
+def generate_raw_reviews(data_directory, batch_size, flag = "train"):
     data_dir = BASE_PATH/"data"/data_directory
-    pos_files = [f for f in data_dir.glob(flag + "pos.txt")]
-    neg_files = [f for f in data_dir.glob(flag + "neg.txt")]
+    pos_files = [f for f in data_dir.glob(flag + "_pos.txt")]
+    neg_files = [f for f in data_dir.glob(flag + "_neg.txt")]
 
     all_files = pos_files + neg_files
     num_samples_file = sum(1 for line in open(all_files[0]))
@@ -272,24 +269,33 @@ def generate_raw_reviews(data_directory, batch_size, flag):
                     break
                 yield text_chunk
 
-def create_val_raw_reviews(data_path):
-	pos_files = [data_path/"train_pos.txt"]
-	neg_file = [data_path/"train_neg.txt"]
-	num_samples_file = sum(1 for line in open(pos_files[0]))
-	length_val = (int) 0.3 * num_samples_file
-	g = random.randint(0, num_samples_file - length_val)
-	for f in pos_files:
-		with open(str(f), "r", encoding='utf-8') as file:
-			val_lines = list(itertools.islice(file, start = g, stop = g+length_val))
-		with open('val_pos.txt', 'w', encoding = 'utf-8') as val_file:
-			for line in val_lines:
-				val_file.write(line)
-	for f in neg_files:
-		with open(str(f), "r", encoding='utf-8') as file:
-			val_lines = list(itertools.islice(file, start = g, stop = g+length_val))
-		with open('val_neg.txt', 'w', encoding = 'utf-8') as val_file:
-			for line in val_lines:
-				val_file.write(line)
+def create_val_raw_reviews(data_path, r=0.1):
+    """
+    Creates a validation set of movie reviews from the training set.
+    Takes as input the name of the folder where the data is located, as well as
+    a value r < 1 that indicates what fraction of the training data to use for
+    cross-validation.
+    """
+    data_dir = BASE_PATH/"data"/data_path
+    os.chdir(str(data_dir))
+    pos_files = [f for f in data_dir.glob("train_pos.txt")]
+    neg_files = [f for f in data_dir.glob("train_neg.txt")]
+    num_samples_file = sum(1 for line in open(pos_files[0]))
+    length_val = int(r * num_samples_file)
+    g = random.randint(0, num_samples_file - length_val)
+    for f in pos_files:
+        with open(str(f), "rw+", encoding='utf-8') as file:
+            val_lines = list(itertools.islice(file,g,g+length_val))
+            with open('val_pos.txt', 'w', encoding = 'utf-8') as val_file:
+                for line in val_lines:
+                    val_file.write(line)
+    for f in neg_files:
+        with open(str(f), "rw+", encoding='utf-8') as file:
+            val_lines = list(itertools.islice(file,g,g+length_val))
+            with open('val_neg.txt', 'w', encoding = 'utf-8') as val_file:
+                for line in val_lines:
+                    val_file.write(line)
+    os.chdir("../../")
 
 def make_wordvec_matrix(text, wordvec_file=WORD_VEC_FILE, max_seq_length=MAX_SEQ_LENGTH):
     wordvec_df = load_word_vectors(WORD_VEC_FILE)
