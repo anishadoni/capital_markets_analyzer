@@ -12,6 +12,7 @@ import xml.etree.ElementTree as et
 import matplotlib.pyplot as plt
 from multiprocessing import Pool
 from functools import reduce
+from generators import *
 import itertools
 import random
 import re
@@ -25,6 +26,7 @@ WORDVEC_LENGTH = 50
 NUM_CLASSES = 2
 NUM_PROCESSES = 4 # ideally should be set to number of cores on cpu
 NUM_REVIEWS = 50000
+FILE_LENGTHS = {"train": 17500, "test": 25000, "val": 7500}
 WORD_VEC_FILE = "glove.6B.50d.txt"
 
 def load_company_frame(filename):
@@ -109,7 +111,7 @@ def shuffle_in_unison(a,b):
     np.random.set_state(rng_state)
     np.random.shuffle(b)
 
-def load_word_vectors(filename):
+def load_vector_embeddings(filename):
     # data_dir = os.path.join(BASE_PATH, "data//word2vec//")
     data_dir = BASE_PATH/"data"/"glove_wordvec"
     # filename = os.path.join(data_dir, filename)
@@ -156,42 +158,38 @@ def load_short_movie_reviews():
     # plt.axis([0, 80, 0, 900])
     # plt.show()
     return pos_reviews_raw + neg_reviews_raw, labels
-
-
+    
 def format_movie_reviews(data_path, flag="train", batch_size=100, use_generator=True):
     """
     This function 'cleans' the imdb movie review dataset and stores it as
     a single .h5 file.
     NOTE
-    This function as written relies on hardcoding the number of reviewsself.
+    This function as written relies on hardcoding the number of reviews.
     Remember to fix in the future, maybe by adding a .txt file outlining the
     relevant format of the data, like number of classes, number of training
     and testing samples, etc.
     """
     # TODO: Add functionality to automatically calculate shape of dataset.
-
     def to_wordvec(string):
         try:
             return wordvec_df.loc[s.index.intersection(string)].as_matrix()
         except:
             return (np.random.rand(WORDVEC_LENGTH)) #returns vector for unknown words
 
-    wordvec_df = load_word_vectors(WORD_VEC_FILE)
+    wordvec_df = load_vector_embeddings(WORD_VEC_FILE)
     wordvec_length = wordvec_df.shape[-1]
 
-    os.chdir(str(data_path))
+    data_dir = BASE_PATH/"data"/data_path
+    os.chdir(str(data_dir))
     if use_generator:
-        labels = np.zeros(NUM_REVIEWS)
-        labels[:(NUM_REVIEWS//2)] = 1
 
         with h5py.File("review_data.h5") as f:
             dst = f.create_dataset("x_" + flag, shape=(NUM_REVIEWS, 2470, WORDVEC_LENGTH))
-            f.create_dataset("y_" + flag, data=labels)
+            labels = f.create_dataset("y_" + flag, shape=(FILE_LENGTHS[flag], 1))
 
-            for idx, text_chunk in enumerate(generate_raw_reviews(data_directory, "train", batch_size)):
-                wordvec_matrix = pd.DataFrame(text_chunk).fillna(0)
+            for idx, text_chunk in enumerate(generate_raw_reviews_json(data_path, "train", batch_size)):
+                wordvec_matrix = pd.DataFrame([t["x"] for t in text_chunk]).fillna(0)
                 saved_matrix = np.zeros((wordvec_matrix.shape[0], wordvec_matrix.shape[1], WORDVEC_LENGTH))
-
                 if saved_matrix.shape[1] < 2470:
                     saved_matrix = np.concatenate((saved_matrix, np.zeros((saved_matrix.shape[0], 2470-saved_matrix.shape[1], saved_matrix.shape[2]))), axis=1)
                     for i in range(wordvec_matrix.shape[0]):
@@ -201,6 +199,7 @@ def format_movie_reviews(data_path, flag="train", batch_size=100, use_generator=
 
                         #add automation to detect shape of input data required
                 dst[idx*batch_size:(idx+1)*batch_size] = saved_matrix
+                labels[idx*batch_size:(idx+1)*batch_size] = np.expand_dims(np.array([d["y"] for d in text_chunk]), axis = 1)
         return None
                     # wordvec_matrix.to_hdf("review_data.h5", key="review_x", append=True, compression=2, mode="a")
 
@@ -220,13 +219,6 @@ def format_movie_reviews(data_path, flag="train", batch_size=100, use_generator=
     with h5py.File("review_data.h5", "w") as f:
         f.create_dataset("review_y", data=np.array(labels), dtype="float32")
     os.chdir("../../")
-
-# helper function for removing special characters from strings
-strip_special_chars = re.compile("[^A-Za-z0-9 ]+")
-
-def cleanSentences(string):
-    string = string.lower().replace("<br />", " ")
-    return re.sub(strip_special_chars, "", string.lower())
 
 def load_imdb(data_path):
     # NOTE: ADD CHECK FOR DATA FILES
@@ -253,21 +245,56 @@ def load_imdb(data_path):
 
     return pos_reviews + neg_reviews, labels
 
-# NOTE WORK IN PROGRESS
-def generate_raw_reviews(data_directory, batch_size, flag = "train"):
-    data_dir = BASE_PATH/"data"/data_directory
-    pos_files = [f for f in data_dir.glob(flag + "_pos.txt")]
-    neg_files = [f for f in data_dir.glob(flag + "_neg.txt")]
+def reviews_to_json(data_path, r = 0.1):
+    """
+    NOTE: UPDATE TO REMOVE REPEATED CODE -> Possibly create a helper function
+    or a dictionary to map all raw .txt files.
+    Transfers all reviews in raw format to json files. Also creates a validation
+    set from the training set, with a ratio specified by r.
+    """
+    data_dir = BASE_PATH/"data"/data_path
+    os.chdir(str(data_dir))
 
-    all_files = pos_files + neg_files
-    num_samples_file = sum(1 for line in open(all_files[0]))
-    for f in all_files:
-        with open(str(f), "r", encoding='utf-8') as file:
-            while True:
-                text_chunk = [list(map(cleanSentences, line.split())) for line in list(itertools.islice(file, batch_size))]
-                if not text_chunk:
-                    break
-                yield text_chunk
+    train_files = [f for f in data_dir.glob("train*.txt")]
+    test_files = [f for f in data_dir.glob("test*.txt")]
+
+    num_samples_file = sum(1 for line in open(train_files[0]))
+    size_validation = int(r * num_samples_file)
+    start_pt = random.randint(0, num_samples_file - size_validation)
+
+    def to_json(l, file_name):
+        """
+        Helper function for writing the contents of a list to a json file.
+        """
+        label = 0
+        if "pos" in file_name:
+            label = 1
+        with open(file_name + ".json", 'w', encoding = 'utf-8') as file:
+            for i, line in enumerate(l):
+                file.write(json.dumps({"id": i, "x": line, "y": label}))
+                file.write("\n")
+        del l
+
+    for f in train_files:
+        print (str(f))
+        with open(str(f), 'r', encoding = 'utf-8') as file:
+            train_lines = []
+            val_lines = []
+            train_lines = list(itertools.islice(file, 0, start_pt))
+            val_lines = list(itertools.islice(file, start_pt, start_pt + size_validation))
+            train_lines.extend(list(itertools.islice(file, start_pt + size_validation, num_samples_file)))
+
+            to_json(train_lines, os.path.splitext(str(f))[0])
+            if "neg" in str(f):
+                to_json(val_lines, str(data_dir/"val_neg"))
+            else:
+                to_json(val_lines, str(data_dir/"val_pos"))
+
+    for f in test_files:
+        with open(str(f), 'r', encoding = 'utf-8') as file:
+            test_lines = file.readlines()
+            to_json(test_lines, os.path.splitext(str(f))[0])
+    os.chdir("../../")
 
 def create_val_raw_reviews(data_path, r=0.1):
     """
@@ -286,19 +313,19 @@ def create_val_raw_reviews(data_path, r=0.1):
     for f in pos_files:
         with open(str(f), "rw+", encoding='utf-8') as file:
             val_lines = list(itertools.islice(file,g,g+length_val))
-            with open('val_pos.txt', 'w', encoding = 'utf-8') as val_file:
+            with open('validation_pos.txt', 'w', encoding = 'utf-8') as val_file:
                 for line in val_lines:
                     val_file.write(line)
     for f in neg_files:
         with open(str(f), "rw+", encoding='utf-8') as file:
             val_lines = list(itertools.islice(file,g,g+length_val))
-            with open('val_neg.txt', 'w', encoding = 'utf-8') as val_file:
+            with open('validation_neg.txt', 'w', encoding = 'utf-8') as val_file:
                 for line in val_lines:
                     val_file.write(line)
     os.chdir("../../")
 
 def make_wordvec_matrix(text, wordvec_file=WORD_VEC_FILE, max_seq_length=MAX_SEQ_LENGTH):
-    wordvec_df = load_word_vectors(WORD_VEC_FILE)
+    wordvec_df = load_vector_embeddings(WORD_VEC_FILE)
     wordvec_length = wordvec_df.shape[-1]
 
     # properly formats text from [[train],[test]] to [all_data]
