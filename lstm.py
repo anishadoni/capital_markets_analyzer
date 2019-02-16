@@ -31,7 +31,7 @@ class Metrics(keras.callbacks.Callback):
     def on_train_begin(self, logs={}):
         # self.confusion = []
         # self.precision = []
-        
+
         # self.recall = []
         # self.f1s = []
         # self.kappa = []
@@ -67,39 +67,6 @@ def train_multi_models(vn, lstm_1_size, drop_1_size, epoch_size):
                     vn +=1
                 except:
                     continue
-
-def f1(y_true, y_pred):
-    def recall(y_true, y_pred):
-        """Recall metric.
-
-        Only computes a batch_wise average of recall.
-
-        Computes the recall, a metric for multi-label classification of
-        how many relevant items are selected.
-        """
-
-        true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
-        possible_positives = K.sum(K.round(K.clip(y_true, 0, 1)))
-        recall = true_positives / (possible_positives + K.epsilon())
-        return recall
-
-    def precision(y_true, y_pred):
-        """Precision metric.
-
-        Only computes a batch_wise average of precision.
-
-        Computes the precision, a metric for multi-label classification of
-        how many selected items are relevant.
-        """
-
-        true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
-        predicted_positives = K.sum(K.round(K.clip(y_pred, 0, 1)))
-        precision = true_positives / (predicted_positives + K.epsilon())
-        return precision
-    precision = precision(y_true, y_pred)
-    recall = recall(y_true, y_pred)
-    return 2*((precision*recall)/(precision+recall))
-
 
 def train_lstm(data, labels, snapshot_filename, batch_size, max_epochs, lstm_1, drop_1):
     input_dim = np.shape(data)
