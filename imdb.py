@@ -13,20 +13,22 @@ import matplotlib.pyplot as plt
 from multiprocessing import Pool
 from functools import reduce
 from generators import *
-import itertools
+from preprocess_data import shuffle_in_unison
+import more_itertools as mitools
 import random
 import re
 
 BASE_PATH = Path.cwd()
-NUM_WORD_EMBEDDINGS = 400000 # number of word embeddings used
+NUM_WORD_EMBEDDINGS = 400000  # number of word embeddings used
 MAX_SEQ_LENGTH_SHORT = 50
 MAX_SEQ_LENGTH = 2500
 WORDVEC_LENGTH = 50
 NUM_CLASSES = 2
-NUM_PROCESSES = 4 # ideally should be set to number of cores on cpu
+NUM_PROCESSES = 4  # ideally should be set to number of cores on cpu
 NUM_REVIEWS = 50000
 FILE_LENGTHS = {"train": 17500, "test": 25000, "val": 7500}
 WORD_VEC_FILE = "glove.6B.50d.txt"
+
 
 def load_vector_embeddings(filename):
     # data_dir = os.path.join(BASE_PATH, "data//word2vec//")
@@ -34,7 +36,7 @@ def load_vector_embeddings(filename):
     # filename = os.path.join(data_dir, filename)
     filename = data_dir/filename
     print('-------- loading pre-trained word vector matrix ----------')
-    raw_wordvec_file = open(str(filename), encoding = "utf8")
+    raw_wordvec_file = open(str(filename), encoding="utf8")
     word_index = []
     raw_vectors = []
     for line in raw_wordvec_file:
@@ -44,6 +46,7 @@ def load_vector_embeddings(filename):
     wordvec_df = pd.DataFrame(raw_vectors, word_index)
     raw_wordvec_file.close()
     return wordvec_df
+
 
 def format_movie_reviews(data_path, flag="train", batch_size=100, use_generator=True):
     """
@@ -56,11 +59,12 @@ def format_movie_reviews(data_path, flag="train", batch_size=100, use_generator=
     and testing samples, etc.
     """
     # TODO: Add functionality to automatically calculate shape of dataset.
-    def to_wordvec(string):
+    def to_wordvec(s):
         try:
-            return wordvec_df.loc[s.index.intersection(string)].as_matrix()
+            return wordvec_df.loc[s.index.intersection(s)].as_matrix()
         except:
-            return (np.random.rand(WORDVEC_LENGTH)) #returns vector for unknown words
+            # returns vector for unknown words
+            return (np.random.rand(WORDVEC_LENGTH))
 
     wordvec_df = load_vector_embeddings(WORD_VEC_FILE)
     wordvec_length = wordvec_df.shape[-1]
@@ -70,26 +74,33 @@ def format_movie_reviews(data_path, flag="train", batch_size=100, use_generator=
     if use_generator:
 
         with h5py.File("review_data.h5") as f:
-            dst = f.create_dataset("x_" + flag, shape=(NUM_REVIEWS, 2470, WORDVEC_LENGTH))
-            labels = f.create_dataset("y_" + flag, shape=(FILE_LENGTHS[flag], 1))
+            dst = f.create_dataset(
+                "x_" + flag, shape=(NUM_REVIEWS, 2470, WORDVEC_LENGTH))
+            labels = f.create_dataset(
+                "y_" + flag, shape=(FILE_LENGTHS[flag], 1))
 
             for idx, text_chunk in enumerate(generate_raw_reviews_json(data_path, "train", batch_size)):
-                wordvec_matrix = pd.DataFrame([t["x"] for t in text_chunk]).fillna(0)
-                saved_matrix = np.zeros((wordvec_matrix.shape[0], wordvec_matrix.shape[1], WORDVEC_LENGTH))
+                wordvec_matrix = pd.DataFrame(
+                    [t["x"] for t in text_chunk]).fillna(0)
+                saved_matrix = np.zeros(
+                    (wordvec_matrix.shape[0], wordvec_matrix.shape[1], WORDVEC_LENGTH))
                 if saved_matrix.shape[1] < 2470:
-                    saved_matrix = np.concatenate((saved_matrix, np.zeros((saved_matrix.shape[0], 2470-saved_matrix.shape[1], saved_matrix.shape[2]))), axis=1)
+                    saved_matrix = np.concatenate((saved_matrix, np.zeros(
+                        (saved_matrix.shape[0], 2470-saved_matrix.shape[1], saved_matrix.shape[2]))), axis=1)
                     for i in range(wordvec_matrix.shape[0]):
-                        output = np.transpose(wordvec_matrix.apply(to_wordvec, axis = 0).values)
+                        output = np.transpose(
+                            wordvec_matrix.apply(to_wordvec, axis=0).values)
                         saved_matrix[i][:output.shape[0]] = output
                         # wordvec_matrix[i] = wordvec_matrix.apply(to_wordvec, axis=1)
 
-                        #add automation to detect shape of input data required
+                        # add automation to detect shape of input data required
                 dst[idx*batch_size:(idx+1)*batch_size] = saved_matrix
-                labels[idx*batch_size:(idx+1)*batch_size] = np.expand_dims(np.array([d["y"] for d in text_chunk]), axis = 1)
+                labels[idx*batch_size:(idx+1)*batch_size] = np.expand_dims(
+                    np.array([d["y"] for d in text_chunk]), axis=1)
         return None
-                    # wordvec_matrix.to_hdf("review_data.h5", key="review_x", append=True, compression=2, mode="a")
+        # wordvec_matrix.to_hdf("review_data.h5", key="review_x", append=True, compression=2, mode="a")
 
-    text_raw, labels = load_imdb(data_directory)
+    text_raw, labels = load_imdb(data_dir)
 
     # properly formats text from [[train],[test]] to [all_data]
     text_formatted = reduce(lambda x, y: x + y, text_raw, [])
@@ -99,28 +110,32 @@ def format_movie_reviews(data_path, flag="train", batch_size=100, use_generator=
 
     # loops through the columns of the text matrix and replaces each word with it's respective word vector embedding
     for i in range(wordvec_matrix.shape[1]):
-        wordvec_matrix[i] = wordvec_matrix.apply(to_wordvec, axis = 1)
-    os.chdir(str(BASE_PATH/"data"/data_directory))
+        wordvec_matrix[i] = wordvec_matrix.apply(to_wordvec, axis=1)
+    os.chdir(str(BASE_PATH/"data"/data_dir))
     wordvec_matrix.to_hdf("review_data.h5", key="review_x", mode="w")
     with h5py.File("review_data.h5", "w") as f:
         f.create_dataset("review_y", data=np.array(labels), dtype="float32")
     os.chdir("../../")
 
-def load_imdb(data_path):
+
+def load_imdb(data_path, flag):
     # NOTE: ADD CHECK FOR DATA FILES
     pos_files = [f for f in data_path.glob(flag + "*pos.txt")]
     neg_files = [f for f in data_path.glob(flag + "*neg.txt")]
     pos_reviews = []
     for file in pos_files:
-        pos_reviews.append([list(map(cleanSentences, line.split())) for line in open(str(file), "r", encoding='utf-8') if len(line.split()) <= MAX_SEQ_LENGTH])
+        pos_reviews.append([list(map(cleanSentences, line.split())) for line in open(
+            str(file), "r", encoding='utf-8') if len(line.split()) <= MAX_SEQ_LENGTH])
     print("Positive reviews read into memory!")
 
     neg_reviews = []
     for file in neg_files:
-        neg_reviews.append([list(map(cleanSentences, line.split())) for line in open(str(file), "r", encoding='utf-8') if len(line.split()) <= MAX_SEQ_LENGTH])
+        neg_reviews.append([list(map(cleanSentences, line.split())) for line in open(
+            str(file), "r", encoding='utf-8') if len(line.split()) <= MAX_SEQ_LENGTH])
     print("Negative reviews read into memory!")
 
-    num_reviews = len(pos_reviews[0]) + len(pos_reviews[1]) + len(neg_reviews[0]) + len(neg_reviews[1])
+    num_reviews = len(pos_reviews[0]) + len(pos_reviews[1]) + \
+        len(neg_reviews[0]) + len(neg_reviews[1])
     print("The total number of reviews: ", num_reviews)
 
     # NOTE the number of reviews here is hardcoded, remember to fix later
@@ -128,10 +143,10 @@ def load_imdb(data_path):
     labels[:len(pos_reviews)] = 1
     labels[len(neg_reviews):] = 0
 
-
     return pos_reviews + neg_reviews, labels
 
-def reviews_to_json(data_path, r = 0.1):
+
+def reviews_to_json(data_path, r=0.1):
     """
     NOTE: UPDATE TO REMOVE REPEATED CODE -> Possibly create a helper function
     or a dictionary to map all raw .txt files.
@@ -155,20 +170,22 @@ def reviews_to_json(data_path, r = 0.1):
         label = 0
         if "pos" in file_name:
             label = 1
-        with open(file_name + ".json", 'w', encoding = 'utf-8') as file:
+        with open(file_name + ".json", 'w', encoding='utf-8') as file:
             for i, line in enumerate(l):
                 file.write(json.dumps({"id": i, "x": line, "y": label}))
                 file.write("\n")
         del l
 
     for f in train_files:
-        print (str(f))
-        with open(str(f), 'r', encoding = 'utf-8') as file:
+        print(str(f))
+        with open(str(f), 'r', encoding='utf-8') as file:
             train_lines = []
             val_lines = []
-            train_lines = list(itertools.islice(file, 0, start_pt))
-            val_lines = list(itertools.islice(file, start_pt, start_pt + size_validation))
-            train_lines.extend(list(itertools.islice(file, start_pt + size_validation, num_samples_file)))
+            train_lines = list(mitools.islice(file, 0, start_pt))
+            val_lines = list(mitools.islice(
+                file, start_pt, start_pt + size_validation))
+            train_lines.extend(
+                list(mitools.islice(file, start_pt + size_validation, num_samples_file)))
 
             to_json(train_lines, os.path.splitext(str(f))[0])
             if "neg" in str(f):
@@ -177,10 +194,11 @@ def reviews_to_json(data_path, r = 0.1):
                 to_json(val_lines, str(data_dir/"val_pos"))
 
     for f in test_files:
-        with open(str(f), 'r', encoding = 'utf-8') as file:
+        with open(str(f), 'r', encoding='utf-8') as file:
             test_lines = file.readlines()
             to_json(test_lines, os.path.splitext(str(f))[0])
     os.chdir("../../")
+
 
 def create_val_raw_reviews(data_path, r=0.1):
     """
@@ -198,17 +216,18 @@ def create_val_raw_reviews(data_path, r=0.1):
     g = random.randint(0, num_samples_file - length_val)
     for f in pos_files:
         with open(str(f), "rw+", encoding='utf-8') as file:
-            val_lines = list(itertools.islice(file,g,g+length_val))
-            with open('validation_pos.txt', 'w', encoding = 'utf-8') as val_file:
+            val_lines = list(mitools.islice(file, g, g+length_val))
+            with open('validation_pos.txt', 'w', encoding='utf-8') as val_file:
                 for line in val_lines:
                     val_file.write(line)
     for f in neg_files:
         with open(str(f), "rw+", encoding='utf-8') as file:
-            val_lines = list(itertools.islice(file,g,g+length_val))
-            with open('validation_neg.txt', 'w', encoding = 'utf-8') as val_file:
+            val_lines = list(mitools.islice(file, g, g+length_val))
+            with open('validation_neg.txt', 'w', encoding='utf-8') as val_file:
                 for line in val_lines:
                     val_file.write(line)
     os.chdir("../../")
+
 
 def make_wordvec_matrix(text, wordvec_file=WORD_VEC_FILE, max_seq_length=MAX_SEQ_LENGTH):
     wordvec_df = load_vector_embeddings(WORD_VEC_FILE)
@@ -225,15 +244,17 @@ def make_wordvec_matrix(text, wordvec_file=WORD_VEC_FILE, max_seq_length=MAX_SEQ
         try:
             return wordvec_df.loc[s.index.intersection(string)].tolist()
         except:
-            return list(np.random.rand(WORDVEC_LENGTH)) #returns vector for unknown words
+            # returns vector for unknown words
+            return list(np.random.rand(WORDVEC_LENGTH))
 
     # loops through the columns of the text matrix and replaces each word with it's respective word vector embedding
     for i in range(wordvec_matrix.shape[1]):
-        wordvec_matrix[i] = wordvec_matrix.apply(to_wordvec, axis = 1)
+        wordvec_matrix[i] = wordvec_matrix.apply(to_wordvec, axis=1)
 
     print("wordvec_matrix created for input data")
 
     return wordvec_matrix
+
 
 def get_split_data(data, labels, train_split, test_split, cv_split):
     """
@@ -242,7 +263,8 @@ def get_split_data(data, labels, train_split, test_split, cv_split):
 
     split_data(data, 0.7, 0.2, 0.1) would return 70% train, 20% test, 10% cross validation
     """
-    assert train_split + test_split + cv_split <= 1.0, "Total split cannot include more than 100% of trainig data."
+    assert train_split + test_split + \
+        cv_split <= 1.0, "Total split cannot include more than 100% of trainig data."
     num_samples = np.shape(data)[0]
     shuffle_in_unison(data, labels)
     splitpoint_a = math.floor(train_split*num_samples)

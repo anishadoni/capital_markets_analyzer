@@ -13,21 +13,21 @@ import matplotlib.pyplot as plt
 from multiprocessing import Pool
 from functools import reduce
 from generators import *
-import itertools
 import random
 import re
 
 # BASE_PATH = dirname(os.path.realpath(__file__))
 BASE_PATH = Path.cwd()
-NUM_WORD_EMBEDDINGS = 400000 # number of word embeddings used
+NUM_WORD_EMBEDDINGS = 400000  # number of word embeddings used
 MAX_SEQ_LENGTH_SHORT = 50
 MAX_SEQ_LENGTH = 2500
 WORDVEC_LENGTH = 50
 NUM_CLASSES = 2
-NUM_PROCESSES = 4 # ideally should be set to number of cores on cpu
+NUM_PROCESSES = 4  # ideally should be set to number of cores on cpu
 NUM_REVIEWS = 50000
 FILE_LENGTHS = {"train": 17500, "test": 25000, "val": 7500}
 WORD_VEC_FILE = "glove.6B.50d.txt"
+
 
 def load_company_frame(filename):
 
@@ -39,8 +39,8 @@ def load_company_frame(filename):
 
     # view source .xml file for data storage format
     col_names = ['TICKER', 'HASH']
-    index = np.linspace(1, len(root), num = 13)
-    company_df = pd.DataFrame(index = index, columns = col_names)
+    index = np.linspace(1, len(root), num=13)
+    company_df = pd.DataFrame(index=index, columns=col_names)
 
     iterator = 1
     for child in root:
@@ -49,6 +49,7 @@ def load_company_frame(filename):
         iterator = iterator + 1
 
     return company_df
+
 
 def load_tickers(filename):
     _tickers = []
@@ -67,6 +68,8 @@ def load_tickers(filename):
     return _tickers
 
 # loads company hash values
+
+
 def load_company_hash(filename):
     _company_hash_list = []
     xml_file = BASE_PATH/"data"/"twitter"/filename
@@ -78,9 +81,10 @@ def load_company_hash(filename):
 
     return _company_hash_list
 
+
 def load_tweets(filename):
     # tweetsPerFile = 1000
-    company_list = load_company_frame(filename = filename)
+    company_list = load_company_frame(filename=filename)
     all_tweets = []
     # col_names = load_tickers(filename = filename)
     # index = np.linspace(1, 1000, num = 1000)
@@ -105,26 +109,30 @@ def load_tweets(filename):
 
     return all_tweets
 
-def shuffle_in_unison(a,b):
+
+def shuffle_in_unison(a, b):
     rng_state = np.random.get_state()
     np.random.shuffle(a)
     np.random.set_state(rng_state)
     np.random.shuffle(b)
+
 
 def load_short_movie_reviews():
     data_dir = join(BASE_PATH, "data\\short_reviews\\")
     pos_reviews_file = "positive.txt"
     neg_reviews_file = "negative.txt"
 
-    pos_reviews_raw = [line.split() for line in open(join(data_dir, pos_reviews_file), "r")]
+    pos_reviews_raw = [line.split()
+                       for line in open(join(data_dir, pos_reviews_file), "r")]
     print("Positive reviews loaded.")
-    neg_reviews_raw = [line.split() for line in open(join(data_dir, neg_reviews_file), "r")]
+    neg_reviews_raw = [line.split()
+                       for line in open(join(data_dir, neg_reviews_file), "r")]
     print("Negative reviews loaded.")
     num_reviews = len(pos_reviews_raw + neg_reviews_raw)
 
     labels = np.zeros((num_reviews, NUM_CLASSES))
-    labels[:len(pos_reviews_raw)] = [1,0]
-    labels[len(pos_reviews_raw):] = [0,1]
+    labels[:len(pos_reviews_raw)] = [1, 0]
+    labels[len(pos_reviews_raw):] = [0, 1]
 
     num_words = [len(l) for l in pos_reviews_raw]
     num_words += [len(l) for l in neg_reviews_raw]
